@@ -1,0 +1,72 @@
+/* ─── TranscriptFeed.css ────────────────────────────────────── */
+
+.transcript-feed {
+  width: 100%;
+  max-width: 560px;
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 2px 4px;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
+}
+
+.transcript-feed::-webkit-scrollbar { width: 0; }
+
+/* ── Entry ── */
+.transcript-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  animation: transcriptIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes transcriptIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.transcript-entry.arjun {
+  align-items: flex-start;
+}
+
+.transcript-entry.you {
+  align-items: flex-end;
+}
+
+/* ── Speaker label ── */
+.transcript-speaker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.transcript-entry.arjun .transcript-speaker {
+  color: var(--accent);
+}
+
+.transcript-entry.you .transcript-speaker {
+  color: var(--text-muted);
+}
+
+/* ── Text ── */
+.transcript-text {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  max-width: 88%;
+  margin: 0;
+}
+
+.transcript-entry.arjun .transcript-text {
+  color: var(--text-primary);
+}
+
+.transcript-entry.you .transcript-text {
+  color: var(--text-secondary);
+  text-align: right;
+}

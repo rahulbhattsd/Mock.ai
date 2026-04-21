@@ -1,0 +1,503 @@
+/* ─── PermissionsGate.css ───────────────────────────────────── */
+
+.pgate-root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  position: relative;
+  animation: fadeIn 0.4s ease;
+}
+
+.pgate-grid-bg {
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.013) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.013) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Header ── */
+.pgate-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 40px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.pgate-logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pgate-logo-dot { color: var(--accent); }
+
+.pgate-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-secondary);
+  letter-spacing: 0.1em;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+}
+
+/* ── Body — two column ── */
+.pgate-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  position: relative;
+  z-index: 1;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 48px 40px;
+  gap: 60px;
+}
+
+/* ── Left column ── */
+.pgate-left {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.pgate-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pgate-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 36px;
+  color: var(--text-primary);
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.pgate-sub {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  max-width: 400px;
+}
+
+/* ── Steps ── */
+.pgate-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pgate-step {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.pgate-step.active {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  box-shadow: 0 4px 24px var(--accent-glow);
+}
+
+.pgate-step.done {
+  border-color: rgba(68,255,136,0.25);
+  background: rgba(68,255,136,0.04);
+}
+
+.pgate-step.locked {
+  opacity: 0.4;
+}
+
+/* ── Step icon ── */
+.pgate-step-icon-wrap {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-elevated);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 18px;
+}
+
+.pgate-step.active .pgate-step-icon-wrap {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.pgate-step.done .pgate-step-icon-wrap {
+  border-color: var(--green);
+  background: var(--green-dim);
+}
+
+.pgate-step-check {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--green);
+  color: #0a0a0a;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Step info ── */
+.pgate-step-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pgate-step-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pgate-step-label {
+  font-family: 'Syne', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.pgate-step-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.pgate-step-status.granted {
+  color: var(--green);
+  background: var(--green-dim);
+}
+
+.pgate-step-status.pending {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.pgate-step-status.waiting {
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+}
+
+.pgate-step-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.pgate-step-why {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+/* ── Error ── */
+.pgate-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--red-dim);
+  border: 1px solid rgba(255,68,68,0.25);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--red);
+  line-height: 1.5;
+}
+
+.pgate-error-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+/* ── CTA button ── */
+.pgate-btn {
+  width: 100%;
+  padding: 16px 24px;
+  background: var(--accent);
+  color: #0a0a0a;
+  border-radius: var(--radius);
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 32px var(--accent-glow);
+  border: none;
+}
+
+.pgate-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 0 48px var(--accent-glow);
+}
+
+.pgate-btn.loading,
+.pgate-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.pgate-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(0,0,0,0.2);
+  border-top-color: #0a0a0a;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+/* ── All granted state ── */
+.pgate-ready {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  background: var(--green-dim);
+  border: 1px solid rgba(68,255,136,0.3);
+  border-radius: var(--radius);
+  animation: fadeIn 0.3s ease;
+}
+
+.pgate-ready-icon {
+  color: var(--green);
+  font-size: 18px;
+  animation: spin 2s linear infinite;
+  display: inline-block;
+}
+
+.pgate-ready-text {
+  font-family: 'Syne', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--green);
+  flex: 1;
+}
+
+.pgate-ready-dots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.pgate-ready-dots span {
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: blink 1.2s ease infinite;
+}
+
+.pgate-ready-dots span:nth-child(2) { animation-delay: 0.2s; }
+.pgate-ready-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+/* ── Legal ── */
+.pgate-legal {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+  margin-top: -12px;
+}
+
+/* ── Right column ── */
+.pgate-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Camera preview ── */
+.pgate-preview-wrap {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  transition: border-color 0.3s ease;
+}
+
+.pgate-preview-wrap.active {
+  border-color: var(--green);
+  box-shadow: 0 0 32px rgba(68,255,136,0.12);
+}
+
+.pgate-preview-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1); /* mirror */
+  display: block;
+}
+
+.pgate-preview-overlay {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pgate-preview-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.7);
+  background: rgba(0,0,0,0.5);
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.06em;
+  backdrop-filter: blur(4px);
+}
+
+.pgate-rec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: blink 1.5s ease infinite;
+}
+
+.pgate-preview-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.pgate-preview-ph-icon {
+  font-size: 32px;
+  opacity: 0.3;
+}
+
+.pgate-preview-ph-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+/* ── Info box ── */
+.pgate-info-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pgate-info-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-secondary);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pgate-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pgate-info-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.pgate-info-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pgate-info-dot.accent { background: var(--accent); }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .pgate-body {
+    grid-template-columns: 1fr;
+    padding: 32px 20px;
+    gap: 32px;
+  }
+
+  .pgate-right {
+    order: -1;
+  }
+
+  .pgate-preview-wrap {
+    max-height: 220px;
+  }
+
+  .pgate-title {
+    font-size: 28px;
+  }
+}

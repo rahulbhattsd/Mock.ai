@@ -1,0 +1,12 @@
+/* ─── WaveformRing.css ──────────────────────────────────────── */
+
+.waveform-ring-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.waveform-canvas {
+  display: block;
+}
