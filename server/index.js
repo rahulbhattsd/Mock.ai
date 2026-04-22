@@ -1,25 +1,16 @@
 import express from "express";
 import authRoutes from "./routes/auth.js";
+import dotenv from "dotenv";
+dotenv.config();
 import cors from "cors";
 import multer from "multer";
 import { MongoClient, ObjectId } from "mongodb";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import dotenv from "dotenv";
+
 import Groq from "groq-sdk";
 import rateLimit from "express-rate-limit";
-import { fileURLToPath } from "url";
-import path from "path";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-app.use(express.static(path.join(__dirname, "../client/dist")));
-
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../client/dist", "index.html"));
-});
-dotenv.config();
 
 // ─── CLIENTS ────────────────────────────────────────────────────────────────
 const app = express();
@@ -223,7 +214,13 @@ Examples of the kind of questions appropriate for this session: ${currentExample
 - Never give the candidate the answer or hint at what a "correct" response looks like.
 `.trim();
 }
+import { fileURLToPath } from "url";
+import path from "path";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config();
 // ─── GROQ CHAT HELPER ────────────────────────────────────────────────────────
 async function groqChat(history, role, difficulty) {
   // Build a dynamic "topics already covered" reminder to avoid repetition
@@ -689,6 +686,11 @@ app.post("/api/hr/seed", async (req, res) => {
   }
 });
 
+app.use(express.static(path.join(__dirname, "../client/dist")));
+
+app.get(/.*/, (req, res) => {
+  res.sendFile(path.join(__dirname, "../client/dist", "index.html"));
+});
 // ─── HEALTH ──────────────────────────────────────────────────────────────────
 app.get("/health", (_, res) => res.json({ status: "ok" }));
 
