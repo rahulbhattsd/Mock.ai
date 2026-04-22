@@ -8,7 +8,17 @@ import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import Groq from "groq-sdk";
 import rateLimit from "express-rate-limit";
+import { fileURLToPath } from "url";
+import path from "path";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use(express.static(path.join(__dirname, "../client/dist")));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../client/dist", "index.html"));
+});
 dotenv.config();
 
 // ─── CLIENTS ────────────────────────────────────────────────────────────────
