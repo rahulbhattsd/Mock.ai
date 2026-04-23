@@ -220,7 +220,7 @@ import path from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config();
+
 // ─── GROQ CHAT HELPER ────────────────────────────────────────────────────────
 async function groqChat(history, role, difficulty) {
   // Build a dynamic "topics already covered" reminder to avoid repetition
