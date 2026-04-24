@@ -30,7 +30,14 @@ export default function RoleSelector({ onStart }) {
       <div className="role-grid-bg" />
       <header className="role-header">
         <img src="/favicon.png" alt="Logo" style={{ height: 40, width: 'auto', objectFit: 'contain' }} />
-        <span className="role-badge">BETA</span>
+        <a
+      href="https://www.linkedin.com/in/rahulbhatt-developer/"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="linkedin-link"
+    >
+      <span className="role-badge">Developer Profile</span>
+    </a>
       </header>
 
       <div className="role-hero">
