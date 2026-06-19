@@ -1,9 +1,8 @@
 // client/src/auth/useAuth.js
 import { useState, useEffect, createContext, useContext } from 'react';
+import { API_BASE } from '../api.js';
 
 const AuthContext = createContext(null);
-
-const API = import.meta.env.VITE_API_URL;
 
 export function AuthProvider({ children }) {
   const [user,    setUser]    = useState(null);
@@ -35,7 +34,7 @@ export function AuthProvider({ children }) {
   const signup = async ({ name, email, password, company, role }) => {
     const endpoint = role === 'hr' ? '/api/auth/hr/signup' : '/api/auth/candidate/signup';
     const body = role === 'hr' ? { name, email, password, company } : { name, email, password };
-    const res  = await fetch(`${API}${endpoint}`, {
+    const res  = await fetch(`${API_BASE}${endpoint}`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(body),
@@ -48,7 +47,7 @@ export function AuthProvider({ children }) {
 
   const login = async ({ email, password, role }) => {
     const endpoint = role === 'hr' ? '/api/auth/hr/login' : '/api/auth/candidate/login';
-    const res  = await fetch(`${API}${endpoint}`, {
+    const res  = await fetch(`${API_BASE}${endpoint}`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ email, password }),
@@ -62,7 +61,7 @@ export function AuthProvider({ children }) {
   // ── Google OAuth ─────────────────────────────────────────
   const googleAuth = async ({ credential, role, company }) => {
     const endpoint = role === 'hr' ? '/api/auth/hr/google' : '/api/auth/candidate/google';
-    const res  = await fetch(`${API}${endpoint}`, {
+    const res  = await fetch(`${API_BASE}${endpoint}`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ credential, company }),

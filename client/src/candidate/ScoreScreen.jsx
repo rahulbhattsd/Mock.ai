@@ -9,8 +9,14 @@ const VERDICT_COLOR = {
 };
 
 // ── Answer Improvements accordion ─────────────────────────────────────────────
-function AnswerImprovements({ improvements }) {
+function AnswerImprovements({ improvements, history = [] }) {
   const [openIdx, setOpenIdx] = useState(0);
+  const answersByRound = new Map(
+    history
+      .filter((entry) => entry.role === 'you' || entry.role === 'candidate')
+      .map((entry, index) => [Number(entry.round || index + 1), entry.text || ''])
+  );
+
   if (!improvements?.length) return (
     <p style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '20px' }}>
       No improvement data available.
@@ -30,11 +36,11 @@ function AnswerImprovements({ improvements }) {
             <span className="ss-imp-chevron">{openIdx === i ? '▲' : '▼'}</span>
           </button>
 
-          {openIdx === i && (
+              {openIdx === i && (
             <div className="ss-imp-body">
               <div className="ss-imp-section">
                 <label>Your answer</label>
-                <p className="ss-imp-original">{item.original}</p>
+                <p className="ss-imp-original">{item.original || answersByRound.get(Number(item.round)) || ''}</p>
               </div>
               <div className="ss-imp-section">
                 <label>Stronger answer</label>
@@ -49,7 +55,7 @@ function AnswerImprovements({ improvements }) {
   );
 }
 
-export default function ScoreScreen({ report, config, elapsed, onRetry }) {
+export default function ScoreScreen({ report, history, config, elapsed, onRetry }) {
   const [visible,      setVisible]      = useState(false);
   const [scoreDisplay, setScoreDisplay] = useState(0);
   const [activeTab,    setActiveTab]    = useState('overview');
@@ -119,8 +125,6 @@ export default function ScoreScreen({ report, config, elapsed, onRetry }) {
       </div>
     );
   }
-
-  const hasImprovements = report.answerImprovements?.length > 0;
 
   return (
     <div className={`ss-root ${visible ? 'ss-visible' : ''}`}>
@@ -217,7 +221,7 @@ export default function ScoreScreen({ report, config, elapsed, onRetry }) {
 
       {/* ── Improvements tab ── */}
       {activeTab === 'improvements' && (
-        <AnswerImprovements improvements={report.answerImprovements} />
+        <AnswerImprovements improvements={report.answerImprovements} history={history} />
       )}
 
       <div className="ss-meta">

@@ -1,5 +1,5 @@
 import express from "express";
-import authRoutes from "./routes/auth.js";
+import authRoutes, { authMiddleware } from "./routes/auth.js";
 import dotenv from "dotenv";
 dotenv.config();
 import cors from "cors";
@@ -9,25 +9,110 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
 import Groq from "groq-sdk";
-import rateLimit from "express-rate-limit";
 
 
 // ─── CLIENTS ────────────────────────────────────────────────────────────────
 const app = express();
-const upload = multer({ storage: multer.memoryStorage() });
+app.set("trust proxy", 1);
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 12 * 1024 * 1024 },
+});
 const mongo = new MongoClient(process.env.MONGO_URI);
 
 const groq = new Groq({ apiKey: process.env.GROQ_API });
 const JWT_SECRET = process.env.JWT_SECRET || "changeme_secret";
 
 // ─── RATE LIMITERS ───────────────────────────────────────────────────────────
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
-app.use("/api/voice-start", limiter);
-app.use("/api/transcribe", limiter);
+const memoryRateLimits = new Map();
+const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
+const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+function clientIp(req) {
+  return req.ip || req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || "unknown";
+}
+
+async function hitUpstashRateLimit(key, windowSeconds) {
+  const res = await fetch(`${upstashUrl}/pipeline`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${upstashToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify([
+      ["INCR", key],
+      ["EXPIRE", key, windowSeconds],
+    ]),
+  });
+
+  if (!res.ok) throw new Error(`Upstash rate limit failed: ${res.status}`);
+  const [incr] = await res.json();
+  return Number(incr?.result ?? 0);
+}
+
+function hitMemoryRateLimit(key, windowMs) {
+  const now = Date.now();
+  const current = memoryRateLimits.get(key);
+
+  if (memoryRateLimits.size > 1000) {
+    for (const [storedKey, value] of memoryRateLimits.entries()) {
+      if (value.resetAt <= now) memoryRateLimits.delete(storedKey);
+    }
+  }
+
+  if (!current || current.resetAt <= now) {
+    memoryRateLimits.set(key, { count: 1, resetAt: now + windowMs });
+    return 1;
+  }
+
+  current.count += 1;
+  return current.count;
+}
+
+function createFreeTierRateLimiter({ name, windowMs, max }) {
+  const windowSeconds = Math.ceil(windowMs / 1000);
+
+  return async (req, res, next) => {
+    const bucket = Math.floor(Date.now() / windowMs);
+    const userPart = req.user?.id || req.user?.email || clientIp(req);
+    const key = `rl:${name}:${userPart}:${bucket}`;
+
+    try {
+      const hits = upstashUrl && upstashToken
+        ? await hitUpstashRateLimit(key, windowSeconds)
+        : hitMemoryRateLimit(key, windowMs);
+
+      res.setHeader("X-RateLimit-Limit", String(max));
+      res.setHeader("X-RateLimit-Remaining", String(Math.max(0, max - hits)));
+
+      if (hits > max) {
+        return res.status(429).json({ error: "Too many requests. Please wait and try again." });
+      }
+
+      next();
+    } catch (err) {
+      console.warn("[rate-limit] falling open:", err.message);
+      next();
+    }
+  };
+}
+
+const interviewLimiter = createFreeTierRateLimiter({
+  name: "interview",
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.INTERVIEW_RATE_LIMIT_MAX || 30),
+});
+
+const transcribeLimiter = createFreeTierRateLimiter({
+  name: "transcribe",
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.TRANSCRIBE_RATE_LIMIT_MAX || 40),
+});
 
 // ─── MIDDLEWARE ──────────────────────────────────────────────────────────────
 app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:5173" }));
-app.use(express.json({ limit: "50mb" }));
+app.use(express.json({ limit: "2mb" }));
 app.use("/api/auth", authRoutes);
 
 // ─── ARJUN SYSTEM PROMPT ─────────────────────────────────────────────────────
@@ -284,12 +369,52 @@ function authHR(req, res, next) {
   }
 }
 
+function authCandidate(req, res, next) {
+  authMiddleware(req, res, () => {
+    if (req.user?.role !== "candidate") {
+      return res.status(403).json({ error: "Candidate account required" });
+    }
+    next();
+  });
+}
+
+function sessionOwnerFilter(sessionId, user) {
+  if (!ObjectId.isValid(sessionId)) return null;
+  return {
+    _id: new ObjectId(sessionId),
+    candidateId: user.id,
+  };
+}
+
+function candidateAnswersFromHistory(history = []) {
+  return history
+    .filter((entry) => entry.role === "candidate")
+    .map((entry, index) => ({
+      round: entry.round || index + 1,
+      text: entry.text || "",
+    }));
+}
+
+function hydrateAnswerImprovements(report, history = []) {
+  const answersByRound = new Map(
+    candidateAnswersFromHistory(history).map((answer) => [Number(answer.round), answer.text])
+  );
+
+  return {
+    ...report,
+    answerImprovements: (report.answerImprovements || []).map((item) => ({
+      ...item,
+      original: item.original || answersByRound.get(Number(item.round)) || "",
+    })),
+  };
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 //  CANDIDATE ROUTES
 // ════════════════════════════════════════════════════════════════════════════
 
 // POST /api/voice-start
-app.post("/api/voice-start", async (req, res) => {
+app.post("/api/voice-start", authCandidate, interviewLimiter, async (req, res) => {
   try {
     const {
       role = "Software Engineer",
@@ -300,6 +425,8 @@ app.post("/api/voice-start", async (req, res) => {
     const db = req.app.locals.db;
 
     const session = {
+      candidateId: req.user.id,
+      candidateEmail: req.user.email,
       candidateName,
       role,
       difficulty,
@@ -328,7 +455,7 @@ app.post("/api/voice-start", async (req, res) => {
 });
 
 // POST /api/transcribe
-app.post("/api/transcribe", upload.single("audio"), async (req, res) => {
+app.post("/api/transcribe", authCandidate, transcribeLimiter, upload.single("audio"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No audio file" });
 
@@ -378,13 +505,16 @@ app.post("/api/transcribe", upload.single("audio"), async (req, res) => {
 });
 
 // POST /api/voice-respond
-app.post("/api/voice-respond", async (req, res) => {
+app.post("/api/voice-respond", authCandidate, interviewLimiter, async (req, res) => {
   try {
     const { sessionId, transcript } = req.body;
     const db = req.app.locals.db;
 
+    const filter = sessionOwnerFilter(sessionId, req.user);
+    if (!filter) return res.status(400).json({ error: "Invalid sessionId" });
+
     const session = await db.collection("sessions").findOne(
-      { _id: new ObjectId(sessionId) },
+      filter,
       { projection: { history: 1, role: 1, difficulty: 1 } }
     );
     if (!session) return res.status(404).json({ error: "Session not found" });
@@ -407,7 +537,7 @@ app.post("/api/voice-respond", async (req, res) => {
         : groqChat(updatedHistory, session.role, session.difficulty),
 
       db.collection("sessions").updateOne(
-        { _id: new ObjectId(sessionId) },
+        filter,
         {
           $push: {
             history: { role: "candidate", text: transcript, round: currentRound },
@@ -419,7 +549,7 @@ app.post("/api/voice-respond", async (req, res) => {
     const [audio] = await Promise.all([
       synthesizeSpeech(response),
       db.collection("sessions").updateOne(
-        { _id: new ObjectId(sessionId) },
+        filter,
         {
           $push: {
             history: {
@@ -441,7 +571,7 @@ app.post("/api/voice-respond", async (req, res) => {
 });
 
 // POST /api/report
-app.post("/api/report", async (req, res) => {
+app.post("/api/report", authCandidate, interviewLimiter, async (req, res) => {
   try {
     const { sessionId } = req.body;
 
@@ -451,22 +581,30 @@ app.post("/api/report", async (req, res) => {
 
     const db = req.app.locals.db;
 
+    const filter = sessionOwnerFilter(sessionId, req.user);
+    if (!filter) return res.status(400).json({ error: "Invalid sessionId" });
+
     const session = await db
       .collection("sessions")
-      .findOne({ _id: new ObjectId(sessionId) });
+      .findOne(filter);
 
     if (!session) {
       return res.status(404).json({ error: "Session not found" });
     }
 
- // In the /api/report route, change historyText to this:
-const historyText = session.history
-  .map((h, i) => {
-    const roundNum = Math.floor(i / 2) + 1;
-    const label = h.role === "arjun" ? `Interviewer (Round ${roundNum})` : `Candidate answer (Round ${roundNum})`;
-    return `${label}: ${h.text}`;
-  })
-  .join("\n");
+    if (session.report) {
+      return res.json(hydrateAnswerImprovements(session.report, session.history));
+    }
+
+    const historyText = session.history
+      .map((h, i) => {
+        const roundNum = h.round || Math.floor(i / 2) + 1;
+        const label = h.role === "arjun"
+          ? `Interviewer (Round ${roundNum})`
+          : `Candidate answer (Round ${roundNum})`;
+        return `${label}: ${h.text}`;
+      })
+      .join("\n");
 
     const prompt = `
 You are a senior engineering hiring manager.
@@ -497,16 +635,13 @@ Return JSON in this exact format:
   "answerImprovements": [
   {
     "round": number,
-    "original": string,   // copy the candidate's EXACT words from the transcript above
     "improved": string,   // what a strong answer would look like
     "tip": string         // one-line tip on what was missing
   }
 ]
-
-IMPORTANT: For "original", copy the candidate's actual answer verbatim from the transcript. Do not paraphrase or summarize it.
 }
 
-For answerImprovements: for each candidate answer, provide what a strong answer would have looked like, and a one-line tip on what was missing or could be sharper.
+For answerImprovements: for each candidate answer, return only the round number, what a strong answer would have looked like, and a one-line tip. Do not include or copy the original candidate answer.
 `;
 
     const completion = await groq.chat.completions.create({
@@ -531,8 +666,16 @@ For answerImprovements: for each candidate answer, provide what a strong answer 
       return res.status(500).json({ error: "Invalid JSON from AI" });
     }
 
+    if (Array.isArray(report.answerImprovements)) {
+      report.answerImprovements = report.answerImprovements.map(({ round, improved, tip }) => ({
+        round,
+        improved,
+        tip,
+      }));
+    }
+
     await db.collection("sessions").updateOne(
-      { _id: new ObjectId(sessionId) },
+      filter,
       {
         $set: {
           overallScore: report.overallScore,
@@ -544,7 +687,7 @@ For answerImprovements: for each candidate answer, provide what a strong answer 
       }
     );
 
-    res.json(report);
+    res.json(hydrateAnswerImprovements(report, session.history));
   } catch (err) {
     console.error("Report API Error:", err);
     res.status(500).json({ error: err.message });
@@ -552,17 +695,22 @@ For answerImprovements: for each candidate answer, provide what a strong answer 
 });
 
 // POST /api/upload-recording
-app.post("/api/upload-recording", upload.single("video"), async (req, res) => {
+app.post("/api/upload-recording", authCandidate, upload.single("recording"), async (req, res) => {
   try {
+    if (process.env.ENABLE_RECORDING_UPLOAD !== "true") {
+      return res.status(410).json({ error: "Recording upload is disabled on the free-tier deployment." });
+    }
     if (!req.file) return res.status(400).json({ error: "No video" });
     const { sessionId } = req.body;
     const db = req.app.locals.db;
+    const filter = sessionOwnerFilter(sessionId, req.user);
+    if (!filter) return res.status(400).json({ error: "Invalid sessionId" });
 
     // STUB — swap in S3/R2 upload here when ready
     const url = `https://storage.example.com/recordings/${sessionId}.webm`;
 
     await db.collection("sessions").updateOne(
-      { _id: new ObjectId(sessionId) },
+      filter,
       { $set: { recordingUrl: url } }
     );
 
@@ -634,7 +782,10 @@ app.get("/api/hr/candidate/:id", authHR, async (req, res) => {
 
     const session = await db
       .collection("sessions")
-      .findOne({ _id: new ObjectId(req.params.id) });
+      .findOne(
+        { _id: new ObjectId(req.params.id) },
+        { projection: { candidateEmail: 0 } }
+      );
     if (!session) return res.status(404).json({ error: "Not found" });
 
     const note = await db
@@ -686,6 +837,8 @@ app.post("/api/hr/seed", async (req, res) => {
   }
 });
 
+app.get("/health", (_, res) => res.json({ status: "ok" }));
+
 app.use(express.static(path.join(__dirname, "../client/dist")));
 
 app.get(/.*/, (req, res) => {
@@ -705,6 +858,15 @@ async function start() {
   await db.collection("sessions").createIndex({ overallScore: -1 });
   await db.collection("sessions").createIndex({ role: 1 });
   await db.collection("sessions").createIndex({ status: 1 });
+  await db.collection("sessions").createIndex({ candidateId: 1, createdAt: -1 });
+  await db.collection("sessions").createIndex(
+    { createdAt: 1 },
+    {
+      expireAfterSeconds: Number(process.env.ACTIVE_SESSION_TTL_SECONDS || 60 * 60 * 6),
+      partialFilterExpression: { status: "active" },
+      name: "delete_abandoned_active_sessions",
+    }
+  );
 
   const PORT = process.env.PORT || 3001;
   app.listen(PORT, () => console.log(`🚀 Server running on :${PORT}`));

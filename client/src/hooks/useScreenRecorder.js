@@ -6,6 +6,7 @@
 //   const { start, stop, isRecording, error } = useScreenRecorder({ webcamStream, sessionId })
 
 import { useRef, useState, useCallback } from 'react';
+import { API_BASE, authHeaders } from '../api.js';
 
 const FPS          = 30;
 const WEBM_MIME    = 'video/webm;codecs=vp9,opus';
@@ -185,6 +186,12 @@ export default function useScreenRecorder({ webcamStreamRef, sessionId }) {
 
   // ── Upload to server ────────────────────────────────────────
   const uploadRecording = useCallback(async (mime) => {
+    if (import.meta.env.VITE_ENABLE_RECORDING_UPLOAD !== 'true') {
+      chunksRef.current = [];
+      setUploadState('idle');
+      return;
+    }
+
     if (chunksRef.current.length === 0) return;
     setUploadState('uploading');
 
@@ -194,8 +201,9 @@ export default function useScreenRecorder({ webcamStreamRef, sessionId }) {
     formData.append('sessionId', sessionId);
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/upload-recording`, {
+      const res = await fetch(`${API_BASE}/api/upload-recording`, {
         method: 'POST',
+        headers: authHeaders(),
         body:   formData,
       });
       if (!res.ok) throw new Error('Upload failed');

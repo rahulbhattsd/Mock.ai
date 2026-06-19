@@ -1,0 +1,10 @@
+{
+  "name": "mock-interview",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npm --prefix server run dev",
+    "render-build": "npm --prefix server install && npm --prefix client install && npm --prefix client run build",
+    "start": "npm --prefix server start"
+  }
+}

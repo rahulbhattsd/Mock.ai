@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: mock-interview
+    runtime: node
+    plan: free
+    buildCommand: npm run render-build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ACTIVE_SESSION_TTL_SECONDS
+        value: 21600
+      - key: ENABLE_RECORDING_UPLOAD
+        value: "false"

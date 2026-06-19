@@ -6,6 +6,7 @@ import TranscriptFeed    from '../components/TranscriptFeed.jsx';
 import useVAD            from '../hooks/useVAD.js';
 import useAudioPlayer    from '../hooks/useAudioPlayer.js';
 import useScreenRecorder from '../hooks/useScreenRecorder.js';
+import { API_BASE, authHeaders } from '../api.js';
 
 const TOTAL_ROUNDS = 7;
 
@@ -136,6 +137,7 @@ export default function VoiceInterview({ config, streams, onFinish }) {
   const interviewStarted = useRef(false);
   const onTranscriptRef  = useRef(null);
   const stableSessionId  = useRef(`pending_${Date.now()}`);
+  const transcriptRef    = useRef([]);
 
   // ✅ KEY FIX: store elapsed in a ref so callbacks always read the latest value
   // without needing elapsed in their dependency arrays (which caused re-renders
@@ -143,6 +145,16 @@ export default function VoiceInterview({ config, streams, onFinish }) {
   const elapsedRef = useRef(0);
 
   useEffect(() => { phaseRef.current = phase; }, [phase]);
+
+  const appendTranscript = useCallback((entry) => {
+    transcriptRef.current = [...transcriptRef.current, entry];
+    setTranscript(transcriptRef.current);
+  }, []);
+
+  const replaceTranscript = useCallback((entries) => {
+    transcriptRef.current = entries;
+    setTranscript(entries);
+  }, []);
 
   const { play, stop: stopAudio, isPlaying, analyser } = useAudioPlayer();
 
@@ -207,17 +219,18 @@ export default function VoiceInterview({ config, streams, onFinish }) {
     setLiveAnswer('');
 
     idCounter.current++;
-    setTranscript(prev => [...prev, {
+    appendTranscript({
       role: 'you',
       text,
+      round: currentRound,
       id: idCounter.current,
-    }]);
+    });
     setPhase('arjun_thinking');
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/voice-respond`, {
+      const res = await fetch(`${API_BASE}/api/voice-respond`, {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           sessionId:  sessionIdRef.current,
           transcript: text,
@@ -233,11 +246,12 @@ export default function VoiceInterview({ config, streams, onFinish }) {
       const responseText = data.response?.trim() || FALLBACK_RESPONSE;
 
       idCounter.current++;
-      setTranscript(prev => [...prev, {
+      appendTranscript({
         role: 'arjun',
         text: responseText,
+        round: data.round,
         id: idCounter.current,
-      }]);
+      });
 
       // ── Done ──────────────────────────────────────────────────────────────
       if (data.done || currentRound >= TOTAL_ROUNDS) {
@@ -249,19 +263,23 @@ export default function VoiceInterview({ config, streams, onFinish }) {
 
         speakArjun(responseText, data.audio, async () => {
           try {
-            const rRes = await fetch(`${import.meta.env.VITE_API_URL}/api/report`, {
+            const rRes = await fetch(`${API_BASE}/api/report`, {
               method:  'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: authHeaders({ 'Content-Type': 'application/json' }),
               body: JSON.stringify({ sessionId: sessionIdRef.current }),
             });
+            if (!rRes.ok) {
+              const errData = await rRes.json().catch(() => ({}));
+              throw new Error(errData.error || `Server ${rRes.status}`);
+            }
             const report = await rRes.json();
             if (report.answerImprovements?.length) {
               setImprovements(report.answerImprovements);
             }
             // ✅ Read elapsed from ref — always the real current value
-            onFinish({ sessionId: sessionIdRef.current, config, elapsed: elapsedRef.current, report });
+            onFinish({ sessionId: sessionIdRef.current, config, elapsed: elapsedRef.current, report, history: transcriptRef.current });
           } catch {
-            onFinish({ sessionId: sessionIdRef.current, config, elapsed: elapsedRef.current, report: null });
+            onFinish({ sessionId: sessionIdRef.current, config, elapsed: elapsedRef.current, report: null, history: transcriptRef.current });
           }
         });
         return;
@@ -284,7 +302,7 @@ export default function VoiceInterview({ config, streams, onFinish }) {
       setPhase('idle');
     }
   // ✅ `elapsed` removed from deps — we use elapsedRef instead
-  }, [config, speakArjun, onFinish]);
+  }, [appendTranscript, config, speakArjun, onFinish]);
 
   useEffect(() => { onTranscriptRef.current = handleTranscript; }, [handleTranscript]);
 
@@ -330,9 +348,9 @@ export default function VoiceInterview({ config, streams, onFinish }) {
     setPhase('arjun_thinking');
     setError('');
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/voice-start`, {
+      const res = await fetch(`${API_BASE}/api/voice-start`, {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           role:          config.role,
           difficulty:    config.difficulty,
@@ -344,14 +362,14 @@ export default function VoiceInterview({ config, streams, onFinish }) {
       sessionIdRef.current = data.sessionId;
       const questionText = data.question?.trim() || FALLBACK_QUESTION;
       idCounter.current++;
-      setTranscript([{ role: 'arjun', text: questionText, id: idCounter.current }]);
+      replaceTranscript([{ role: 'arjun', text: questionText, round: data.round || 1, id: idCounter.current }]);
       speakArjun(questionText, data.audio, () => setPhase('idle'));
       setPhase('arjun_speaking');
     } catch (err) {
       console.error('[Interview] voice-start failed:', err);
       setError(`Could not connect to server (${err.message}).`);
       idCounter.current++;
-      setTranscript([{ role: 'arjun', text: FALLBACK_QUESTION, id: idCounter.current }]);
+      replaceTranscript([{ role: 'arjun', text: FALLBACK_QUESTION, round: 1, id: idCounter.current }]);
       speakWhenReady(FALLBACK_QUESTION, () => setPhase('idle'));
       setPhase('arjun_speaking');
     }

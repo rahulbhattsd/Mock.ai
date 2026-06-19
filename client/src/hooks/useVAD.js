@@ -1,5 +1,6 @@
 // hooks/useVAD.js
 import { useRef, useCallback } from 'react';
+import { API_BASE, authHeaders } from '../api.js';
 
 const MIN_SPEECH_MS = 300;
 
@@ -72,8 +73,9 @@ export default function useVAD({ onTranscript, onStateChange }) {
           const formData = new FormData();
           formData.append('audio', blob, 'speech.webm');
 
-          const res = await fetch(`${import.meta.env.VITE_API_URL}/api/transcribe`, {
+          const res = await fetch(`${API_BASE}/api/transcribe`, {
             method: 'POST',
+            headers: authHeaders(),
             body:   formData,
           });
 

@@ -82,14 +82,31 @@ function AnswerImprovements({ improvements }) {
   );
 }
 
+function hydrateImprovements(report, history = []) {
+  const answersByRound = new Map(
+    history
+      .filter((entry) => entry.role === 'you' || entry.role === 'candidate')
+      .map((entry, index) => [Number(entry.round || index + 1), entry.text || ''])
+  );
+
+  return {
+    ...report,
+    answerImprovements: report.answerImprovements?.map((item) => ({
+      ...item,
+      original: item.original || answersByRound.get(Number(item.round)) || '',
+    })),
+  };
+}
+
 export default function FeedbackReport({ sessionData, report, onRetry }) {
   const [visible,      setVisible]      = useState(false);
   const [scoreDisplay, setScoreDisplay] = useState(0);
   const [activeTab,    setActiveTab]    = useState('overview');
   const canvasRef = useRef(null);
 
-  const score   = report?.overallScore ?? 0;
-  const verdict = report?.verdict      ?? 'Borderline';
+  const displayReport = report ? hydrateImprovements(report, sessionData?.history) : null;
+  const score   = displayReport?.overallScore ?? 0;
+  const verdict = displayReport?.verdict      ?? 'Borderline';
   const color   = VERDICT_COLOR[verdict] ?? '#facc15';
   const elapsed = sessionData?.elapsed ?? 0;
   const config  = sessionData?.config  ?? {};
@@ -136,7 +153,7 @@ export default function FeedbackReport({ sessionData, report, onRetry }) {
 
   const fmt = (s) => `${Math.floor(s / 60)}m ${s % 60}s`;
 
-  if (!report) {
+  if (!displayReport) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#080808', color: '#fff', gap: 16 }}>
         <div style={{ width: 32, height: 32, border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#e8ff47', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -200,16 +217,16 @@ export default function FeedbackReport({ sessionData, report, onRetry }) {
         {/* ── Overview tab ── */}
         {activeTab === 'overview' && (
           <>
-            {report.summary && (
+            {displayReport.summary && (
               <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', lineHeight: 1.6, margin: '16px 0 24px' }}>
-                {report.summary}
+                {displayReport.summary}
               </p>
             )}
 
             {/* Round scores */}
-            {report.roundScores?.length > 0 && (
+            {displayReport.roundScores?.length > 0 && (
               <div style={{ marginBottom: 24 }}>
-                {report.roundScores.map((s, i) => (
+                {displayReport.roundScores.map((s, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                     <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', width: 28 }}>R{i+1}</span>
                     <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
@@ -227,21 +244,21 @@ export default function FeedbackReport({ sessionData, report, onRetry }) {
 
             {/* Strengths + Weaknesses */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-              {report.strengths?.length > 0 && (
+              {displayReport.strengths?.length > 0 && (
                 <div style={{ background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: 10, padding: '14px 16px' }}>
                   <h4 style={{ color: '#4ade80', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>Strengths</h4>
                   <ul style={{ margin: 0, paddingLeft: 16 }}>
-                    {report.strengths.map((s, i) => (
+                    {displayReport.strengths.map((s, i) => (
                       <li key={i} style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.65)', marginBottom: 4, lineHeight: 1.45 }}>{s}</li>
                     ))}
                   </ul>
                 </div>
               )}
-              {report.weaknesses?.length > 0 && (
+              {displayReport.weaknesses?.length > 0 && (
                 <div style={{ background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 10, padding: '14px 16px' }}>
                   <h4 style={{ color: '#f87171', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>Areas to Improve</h4>
                   <ul style={{ margin: 0, paddingLeft: 16 }}>
-                    {report.weaknesses.map((w, i) => (
+                    {displayReport.weaknesses.map((w, i) => (
                       <li key={i} style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.65)', marginBottom: 4, lineHeight: 1.45 }}>{w}</li>
                     ))}
                   </ul>
@@ -250,11 +267,11 @@ export default function FeedbackReport({ sessionData, report, onRetry }) {
             </div>
 
             {/* Study list */}
-            {report.studyList?.length > 0 && (
+            {displayReport.studyList?.length > 0 && (
               <div style={{ marginBottom: 20 }}>
                 <h4 style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Study These Next</h4>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {report.studyList.map((t, i) => (
+                  {displayReport.studyList.map((t, i) => (
                     <span key={i} style={{ padding: '5px 12px', borderRadius: 20, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
                       {t}
                     </span>
@@ -267,7 +284,7 @@ export default function FeedbackReport({ sessionData, report, onRetry }) {
 
         {/* ── Improvements tab ── */}
         {activeTab === 'improvements' && (
-          <AnswerImprovements improvements={report.answerImprovements} />
+          <AnswerImprovements improvements={displayReport.answerImprovements} />
         )}
 
         <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: '0.78rem', margin: '20px 0 16px' }}>
