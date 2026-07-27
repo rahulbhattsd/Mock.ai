@@ -1078,7 +1078,7 @@ app.post("/api/report", authCandidate, interviewLimiter, async (req, res) => {
       })
       .join("\n");
 
-    const prompt = `
+   const prompt = `
 You are a senior engineering hiring manager.
 
 IMPORTANT:
@@ -1086,6 +1086,23 @@ IMPORTANT:
 - DO NOT add explanation
 - DO NOT use markdown
 - DO NOT wrap in \`\`\`
+
+Calibration guidance:
+- Evaluate the candidate against what's reasonable to expect at the '${session.difficulty}' level for a '${session.role}' role - a fresher-level answer should be judged against fresher expectations, not senior expectations.
+- Ignore the interviewer's tone. The transcript includes the interviewer's own reactions to each answer. These reactions are intentionally terse and critical by design and should NOT be treated as a signal of quality - base your score only on the substance of the CANDIDATE's answers, not on how the interviewer responded to them.
+- Use this score rubric:
+  - 85-100: Exceptional - clear command of the subject, answers are precise, well-structured, and go beyond the surface level for this difficulty tier.
+  - 70-84: Strong - solid understanding, mostly correct and complete answers, minor gaps or occasional imprecision.
+  - 55-69: Borderline - understands the basics but answers are incomplete, vague, or inconsistent; real gaps in depth.
+  - 35-54: Weak - frequent misunderstanding, answers don't hold up to follow-up.
+  - Under 35: Reserve for candidates who could not meaningfully engage with most questions at all.
+- Most candidates who complete a coherent interview with mostly-correct answers should land in the 60-85 range. Do not default to the middle or low end just because answers aren't perfect - score what's actually there.
+- overallScore should be a reasonable reflection of the roundScores average. It does not need to be a strict formula, but it should be a sanity-checked holistic score that does not visibly contradict the per-round scores.
+- Verdict must be consistent with overallScore using this mapping:
+  - Hire: overallScore 70 and above
+  - Borderline: overallScore 45-69
+  - Reject: overallScore below 45
+  Do not assign a verdict that contradicts the score band above.
 
 Evaluate this interview:
 
