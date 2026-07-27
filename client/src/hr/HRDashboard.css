@@ -1,0 +1,248 @@
+.hr-dashboard {
+  min-height: 100vh;
+  background: #080808;
+  color: #f0f0f0;
+  padding: 24px clamp(16px, 4vw, 48px) 56px;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.hr-grid-bg {
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(232, 255, 71, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232, 255, 71, 0.025) 1px, transparent 1px);
+  background-size: 44px 44px;
+  pointer-events: none;
+}
+
+.hr-dashboard-header,
+.hr-dashboard-hero,
+.hr-panel {
+  position: relative;
+  z-index: 1;
+}
+
+.hr-dashboard-header {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 0 24px;
+}
+
+.hr-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #f0f0f0;
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+
+.hr-brand-mark {
+  color: #e8ff47;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.hr-brand-dot {
+  color: #e8ff47;
+}
+
+.hr-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hr-company {
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.2;
+}
+
+.hr-company-label {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.hr-company strong {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+}
+
+.hr-signout,
+.hr-tabs button,
+.hr-primary-btn,
+.detail-back {
+  border-radius: 8px;
+  font-weight: 700;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.hr-signout {
+  padding: 9px 14px;
+  color: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hr-signout:hover,
+.hr-tabs button:hover,
+.detail-back:hover {
+  border-color: rgba(232, 255, 71, 0.35);
+  transform: translateY(-1px);
+}
+
+.hr-dashboard-hero {
+  max-width: 1180px;
+  margin: 0 auto 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 20px;
+}
+
+.hr-eyebrow,
+.hr-section-kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  color: rgba(255, 255, 255, 0.42);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.hr-eyebrow span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #e8ff47;
+  box-shadow: 0 0 16px rgba(232, 255, 71, 0.5);
+}
+
+.hr-dashboard-hero h1 {
+  margin: 0;
+  color: #f4f4f4;
+  font-family: 'Syne', sans-serif;
+  font-size: 40px;
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+}
+
+.hr-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+}
+
+.hr-tabs button {
+  min-height: 38px;
+  padding: 8px 16px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.hr-tabs button.active {
+  background: rgba(232, 255, 71, 0.13);
+  color: #e8ff47;
+}
+
+.hr-panel {
+  max-width: 1180px;
+  margin: 0 auto;
+  animation: fadeUp 0.35s ease both;
+}
+
+.hr-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.hr-section-head h2 {
+  margin: 0;
+  font-family: 'Syne', sans-serif;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+
+.hr-primary-btn {
+  min-height: 40px;
+  padding: 10px 16px;
+  background: #e8ff47;
+  color: #090909;
+}
+
+.hr-primary-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.hr-primary-btn:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.hr-empty,
+.hr-error {
+  padding: 18px;
+  border-radius: 8px;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.hr-empty {
+  color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hr-error {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.18);
+}
+
+@media (max-width: 720px) {
+  .hr-dashboard-header,
+  .hr-dashboard-hero,
+  .hr-section-head,
+  .hr-header-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .hr-company {
+    align-items: flex-start;
+  }
+
+  .hr-dashboard-hero h1 {
+    font-size: 32px;
+  }
+
+  .hr-tabs {
+    width: 100%;
+  }
+}

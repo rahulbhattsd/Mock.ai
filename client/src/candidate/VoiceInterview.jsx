@@ -117,7 +117,7 @@ function ImprovementPanel({ improvements }) {
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
-export default function VoiceInterview({ config, streams, onFinish }) {
+export default function VoiceInterview({ config, streams, onStartFailure, onFinish }) {
   const [phase,        setPhase]        = useState('idle');
   const [round,        setRound]        = useState(1);
   const [elapsed,      setElapsed]      = useState(0);
@@ -348,16 +348,37 @@ export default function VoiceInterview({ config, streams, onFinish }) {
     setPhase('arjun_thinking');
     setError('');
     try {
+      const isJdBased = config.interviewType === 'jd_based';
+      const requestBody = isJdBased
+        ? new FormData()
+        : JSON.stringify({
+            role:          config.role,
+            difficulty:    config.difficulty,
+            candidateName: config.name ?? 'Candidate',
+          });
+
+      if (isJdBased) {
+        requestBody.append('jdId', config.jdId);
+        requestBody.append('candidateName', config.name ?? 'Candidate');
+        requestBody.append('resumeFile', config.resumeFile);
+      }
+
       const res = await fetch(`${API_BASE}/api/voice-start`, {
         method:  'POST',
-        headers: authHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({
-          role:          config.role,
-          difficulty:    config.difficulty,
-          candidateName: config.name ?? 'Candidate',
-        }),
+        headers: authHeaders(isJdBased ? {} : { 'Content-Type': 'application/json' }),
+        body: requestBody,
       });
-      if (!res.ok) throw new Error(`Server ${res.status}`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        const message = errorData.error || `Server ${res.status}`;
+
+        if (isJdBased && onStartFailure) {
+          onStartFailure({ error: message, config });
+          return;
+        }
+
+        throw new Error(message);
+      }
       const data = await res.json();
       sessionIdRef.current = data.sessionId;
       const questionText = data.question?.trim() || FALLBACK_QUESTION;
@@ -399,6 +420,9 @@ export default function VoiceInterview({ config, streams, onFinish }) {
   const ringMode    = STATE_TO_MODE[phase] ?? 'idle';
   const statusLabel = STATUS_LABELS[phase] ?? '';
   const progress    = (round / TOTAL_ROUNDS) * 100;
+  const interviewLabel = config?.interviewType === 'jd_based'
+    ? `${config.jdTitle || 'JD Interview'} - JD`
+    : `${config.role?.toUpperCase()} - ${config.difficulty?.toUpperCase()}`;
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -410,7 +434,7 @@ export default function VoiceInterview({ config, streams, onFinish }) {
           <span className="vi-logo"><span className="vi-logo-dot">◉</span> mock.ai</span>
           <div className="vi-divider" />
           <span className="vi-role-tag">
-            {config.role?.toUpperCase()} · {config.difficulty?.toUpperCase()}
+            {interviewLabel}
           </span>
         </div>
         <div className="vi-topbar-right">

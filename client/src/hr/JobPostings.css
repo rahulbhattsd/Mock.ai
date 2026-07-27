@@ -1,0 +1,202 @@
+.jobs-panel {
+  padding-top: 12px;
+}
+
+.job-form,
+.job-card {
+  background: rgba(17, 17, 17, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+
+.job-form {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.job-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.job-form span {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.job-form input,
+.job-form textarea,
+.share-link input {
+  width: 100%;
+  color: #f0f0f0;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+}
+
+.job-form input,
+.share-link input {
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.job-form textarea {
+  resize: vertical;
+  min-height: 150px;
+  padding: 12px;
+  line-height: 1.5;
+}
+
+.job-form input:focus,
+.job-form textarea:focus {
+  border-color: rgba(232, 255, 71, 0.45);
+}
+
+.jobs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.job-card {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.job-card-top {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.job-card h3 {
+  min-width: 0;
+  margin: 0;
+  color: #f4f4f4;
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.status-badge,
+.verdict-pill {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.status-badge.active {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.24);
+}
+
+.status-badge.closed {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.24);
+}
+
+.job-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.job-stats div {
+  min-height: 70px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.job-stats span {
+  color: #e8ff47;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.job-stats small {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 12px;
+}
+
+.share-link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.share-link input {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 13px;
+}
+
+.share-link button,
+.job-actions button {
+  min-height: 40px;
+  padding: 0 13px;
+  color: rgba(255, 255, 255, 0.74);
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.share-link button:hover,
+.job-actions button:hover {
+  border-color: rgba(232, 255, 71, 0.34);
+  color: #e8ff47;
+}
+
+.job-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.status-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.status-toggle input {
+  width: 17px;
+  height: 17px;
+  accent-color: #e8ff47;
+}
+
+@media (max-width: 820px) {
+  .jobs-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .share-link {
+    grid-template-columns: 1fr;
+  }
+}

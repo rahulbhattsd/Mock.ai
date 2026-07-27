@@ -1,12 +1,13 @@
+import "dotenv/config";
 // server/routes/auth.js
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
+import { JWT_SECRET } from "../config.js";
 
 const router = express.Router();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-const JWT_SECRET = process.env.JWT_SECRET || "changeme_secret";
 
 // ── Helper: sign JWT ─────────────────────────────────────────
 function signToken(payload) {

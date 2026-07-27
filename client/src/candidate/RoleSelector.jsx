@@ -18,26 +18,48 @@ const difficulties = [
   { id: 'senior',  label: 'Senior',  sub: '5+ yrs'  },
 ];
 
-export default function RoleSelector({ onStart }) {
-  const [selectedRole, setSelectedRole] = useState(null);
-  const [selectedDiff, setSelectedDiff] = useState('mid');
+export default function RoleSelector({ onStart, initialConfig = null, onBrowseJobs, onLogout }) {
+  const [selectedRole, setSelectedRole] = useState(initialConfig?.role ?? null);
+  const [selectedDiff, setSelectedDiff] = useState(initialConfig?.difficulty ?? 'mid');
 
   const canStart = selectedRole !== null;
   const selected = roles.find(r => r.id === selectedRole);
+
+  const startInterview = () => {
+    if (!canStart) return;
+
+    onStart({
+      interviewType: 'practice',
+      role: selectedRole,
+      difficulty: selectedDiff,
+    });
+  };
 
   return (
     <div className="role-page">
       <div className="role-grid-bg" />
       <header className="role-header">
-        <img src="/favicon.png" alt="Logo" style={{ height: 40, width: 'auto', objectFit: 'contain' }} />
-        <a
-      href="https://www.linkedin.com/in/rahulbhatt-developer/"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="linkedin-link"
-    >
-      <span className="role-badge">Developer Profile</span>
-    </a>
+        <img className="role-header-logo" src="/favicon.png" alt="Logo" />
+        <div className="role-header-actions">
+          <a
+            href="https://www.linkedin.com/in/rahulbhatt-developer/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="role-header-link"
+          >
+            Developer Profile
+          </a>
+          {onBrowseJobs && (
+            <button className="role-badge" onClick={onBrowseJobs} type="button">
+              Browse Open Roles
+            </button>
+          )}
+          {onLogout && (
+            <button className="role-header-link" onClick={onLogout} type="button">
+              Sign out
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="role-hero">
@@ -94,7 +116,7 @@ export default function RoleSelector({ onStart }) {
       <div className="start-wrap">
         <button
           className={`start-btn ${canStart ? 'ready' : 'disabled'}`}
-          onClick={() => canStart && onStart({ role: selectedRole, difficulty: selectedDiff })}
+          onClick={() => startInterview()}
           disabled={!canStart}
         >
           {canStart ? <>Start Interview <span className="start-arrow">→</span></> : 'Pick a role to continue'}

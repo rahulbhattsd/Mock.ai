@@ -98,7 +98,7 @@ function hydrateImprovements(report, history = []) {
   };
 }
 
-export default function FeedbackReport({ sessionData, report, onRetry }) {
+export default function FeedbackReport({ sessionData, report, onRetry, onHome, onBrowseJobs }) {
   const [visible,      setVisible]      = useState(false);
   const [scoreDisplay, setScoreDisplay] = useState(0);
   const [activeTab,    setActiveTab]    = useState('overview');
@@ -291,13 +291,27 @@ export default function FeedbackReport({ sessionData, report, onRetry }) {
           Interview duration: {fmt(elapsed)}
         </div>
 
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
           <button onClick={onRetry} style={{
             padding: '12px 32px', borderRadius: 10, background: '#e8ff47',
             color: '#000', fontWeight: 700, fontSize: '0.9rem', border: 'none',
             cursor: 'pointer', fontFamily: 'inherit',
           }}>
             Practice Again
+          </button>
+          <button onClick={onHome} style={{
+            padding: '12px 24px', borderRadius: 10, background: 'rgba(255,255,255,0.06)',
+            color: 'rgba(255,255,255,0.65)', fontWeight: 700, fontSize: '0.9rem',
+            border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+            Home
+          </button>
+          <button onClick={onBrowseJobs} style={{
+            padding: '12px 24px', borderRadius: 10, background: 'rgba(255,255,255,0.06)',
+            color: 'rgba(255,255,255,0.65)', fontWeight: 700, fontSize: '0.9rem',
+            border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+            Browse Jobs
           </button>
         </div>
       </div>

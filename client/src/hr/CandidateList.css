@@ -1,0 +1,135 @@
+.candidates-panel {
+  padding-top: 12px;
+}
+
+.candidate-head {
+  align-items: end;
+}
+
+.candidate-filters {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) 120px;
+  gap: 8px;
+}
+
+.candidate-filters input {
+  min-height: 40px;
+  padding: 0 12px;
+  color: #f0f0f0;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+}
+
+.candidate-filters input:focus {
+  border-color: rgba(232, 255, 71, 0.45);
+}
+
+.active-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  color: rgba(232, 255, 71, 0.92);
+  background: rgba(232, 255, 71, 0.08);
+  border: 1px solid rgba(232, 255, 71, 0.18);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.active-filter button {
+  color: #e8ff47;
+  background: transparent;
+  font-weight: 800;
+}
+
+.candidate-table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(17, 17, 17, 0.88);
+}
+
+.candidate-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.candidate-table th,
+.candidate-table td {
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.065);
+}
+
+.candidate-table th {
+  color: rgba(255, 255, 255, 0.42);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.candidate-table tbody tr {
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.candidate-table tbody tr:hover {
+  background: rgba(232, 255, 71, 0.045);
+}
+
+.candidate-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.candidate-table td {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 14px;
+}
+
+.candidate-table td:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.candidate-table strong {
+  color: #f0f0f0;
+  font-size: 15px;
+}
+
+.candidate-table td:first-child span {
+  color: rgba(255, 255, 255, 0.36);
+  font-size: 12px;
+}
+
+.verdict-pill.hire {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.24);
+}
+
+.verdict-pill.borderline {
+  color: #facc15;
+  background: rgba(250, 204, 21, 0.1);
+  border: 1px solid rgba(250, 204, 21, 0.24);
+}
+
+.verdict-pill.reject {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.24);
+}
+
+@media (max-width: 720px) {
+  .candidate-head {
+    align-items: stretch;
+  }
+
+  .candidate-filters {
+    grid-template-columns: 1fr;
+  }
+}
