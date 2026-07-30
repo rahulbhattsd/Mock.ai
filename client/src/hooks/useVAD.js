@@ -3,8 +3,47 @@ import { useRef, useCallback } from 'react';
 import { API_BASE, authHeaders } from '../api.js';
 
 const MIN_SPEECH_MS = 300;
+const AUDIO_MIME_TYPES = [
+  'audio/webm;codecs=opus',
+  'audio/ogg;codecs=opus',
+  'audio/mp4',
+  'audio/webm',
+];
 
-export default function useVAD({ onTranscript, onStateChange }) {
+const MIC_CONSTRAINTS = {
+  audio: {
+    echoCancellation: true,
+    noiseSuppression: true,
+    autoGainControl: true,
+    channelCount: 1,
+    sampleRate: 48000,
+  },
+  video: false,
+};
+
+function debugLog(...args) {
+  if (import.meta.env.DEV) console.log(...args);
+}
+
+function debugWarn(...args) {
+  if (import.meta.env.DEV) console.warn(...args);
+}
+
+function debugError(...args) {
+  if (import.meta.env.DEV) console.error(...args);
+}
+
+function bestSupportedMimeType() {
+  return AUDIO_MIME_TYPES.find((type) => MediaRecorder.isTypeSupported(type)) || '';
+}
+
+function cloneLiveAudioStream(stream) {
+  const liveTracks = stream?.getAudioTracks?.().filter((track) => track.readyState === 'live') || [];
+  if (!liveTracks.length) return null;
+  return new MediaStream(liveTracks.map((track) => track.clone()));
+}
+
+export default function useVAD({ onTranscript, onStateChange, audioStream }) {
   const streamRef      = useRef(null);
   const mediaRecRef    = useRef(null);
   const chunksRef      = useRef([]);
@@ -13,15 +52,13 @@ export default function useVAD({ onTranscript, onStateChange }) {
   const stoppingRef    = useRef(false);
   const mimeTypeRef    = useRef('audio/webm');
 
-  // ✅ Store the per-call onTranscript override in a ref
   const callbackRef = useRef(onTranscript);
 
   const startListening = useCallback(async (options = {}) => {
-    // ✅ Use per-call onTranscript if provided, else fall back to hook-level one
     callbackRef.current = options.onTranscript ?? onTranscript;
 
     if (activeRef.current) {
-      console.warn('[VAD] already active');
+      debugWarn('[VAD] already active');
       return;
     }
 
@@ -31,19 +68,20 @@ export default function useVAD({ onTranscript, onStateChange }) {
     startTimeRef.current = Date.now();
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = cloneLiveAudioStream(audioStream)
+        || await navigator.mediaDevices.getUserMedia(MIC_CONSTRAINTS);
       streamRef.current = stream;
 
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : 'audio/webm';
-      mimeTypeRef.current = mimeType;
+      const mimeType = bestSupportedMimeType();
+      mimeTypeRef.current = mimeType || 'audio/webm';
 
-      const rec = new MediaRecorder(stream, { mimeType });
+      const rec = mimeType
+        ? new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 128000 })
+        : new MediaRecorder(stream, { audioBitsPerSecond: 128000 });
       mediaRecRef.current = rec;
 
-      rec.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
+      rec.ondataavailable = (event) => {
+        if (event.data.size > 0) chunksRef.current.push(event.data);
       };
 
       rec.onstop = async () => {
@@ -51,7 +89,7 @@ export default function useVAD({ onTranscript, onStateChange }) {
         stoppingRef.current = false;
 
         if (streamRef.current) {
-          streamRef.current.getTracks().forEach(t => t.stop());
+          streamRef.current.getTracks().forEach((track) => track.stop());
           streamRef.current = null;
         }
 
@@ -60,7 +98,7 @@ export default function useVAD({ onTranscript, onStateChange }) {
         chunksRef.current = [];
 
         if (duration < MIN_SPEECH_MS || chunks.length === 0) {
-          console.log('[VAD] too short, skipping');
+          debugLog('[VAD] too short, skipping');
           onStateChange?.('idle');
           return;
         }
@@ -83,37 +121,37 @@ export default function useVAD({ onTranscript, onStateChange }) {
           const data = await res.json();
 
           if (data.transcript?.trim()) {
-            console.log('[VAD] ✅ transcript:', data.transcript);
-            // ✅ Call whichever callback was set at startListening time
+            debugLog('[VAD] transcript:', data.transcript);
             callbackRef.current?.(data.transcript.trim());
           } else {
-            console.warn('[VAD] empty transcript');
+            debugWarn('[VAD] empty transcript');
             onStateChange?.('idle');
           }
         } catch (err) {
-          console.error('[VAD] transcribe error:', err);
+          debugError('[VAD] transcribe error:', err);
           onStateChange?.('error');
         }
       };
 
       rec.start(100);
-      console.log('[VAD] 🎙️ recording started');
+      debugLog('[VAD] recording started');
 
     } catch (err) {
-      console.error('[VAD] mic error:', err);
+      debugError('[VAD] mic error:', err);
       activeRef.current = false;
       onStateChange?.('idle');
     }
-  }, [onTranscript, onStateChange]);
+  }, [audioStream, onTranscript, onStateChange]);
 
   const submitNow = useCallback(() => {
     if (!activeRef.current || stoppingRef.current) {
-      console.warn('[VAD] submitNow: not recording or already stopping');
+      debugWarn('[VAD] submitNow: not recording or already stopping');
       return;
     }
-    console.log('[VAD] submitNow triggered');
+    debugLog('[VAD] submitNow triggered');
     stoppingRef.current = true;
     if (mediaRecRef.current?.state === 'recording') {
+      mediaRecRef.current.requestData?.();
       mediaRecRef.current.stop();
     }
   }, []);
@@ -123,12 +161,13 @@ export default function useVAD({ onTranscript, onStateChange }) {
     stoppingRef.current = true;
 
     if (mediaRecRef.current?.state === 'recording') {
+      mediaRecRef.current.requestData?.();
       mediaRecRef.current.stop();
     } else {
       activeRef.current   = false;
       stoppingRef.current = false;
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
       }
     }

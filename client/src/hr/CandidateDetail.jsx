@@ -46,7 +46,7 @@ function DetailList({ items, emptyText }) {
   );
 }
 
-export default function CandidateDetail({ sessionId, onBack }) {
+export default function CandidateDetail({ sessionId, onBack, onOpenJobPostings }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -126,7 +126,10 @@ export default function CandidateDetail({ sessionId, onBack }) {
   if (error && !session) {
     return (
       <section className="hr-panel candidate-detail">
-        <button className="detail-back" onClick={onBack}>Back to candidates</button>
+        <div className="detail-nav">
+          <button className="detail-back" onClick={onBack}>Back to candidates</button>
+          <button className="detail-back secondary" onClick={onOpenJobPostings}>Job Postings</button>
+        </div>
         <div className="hr-error">{error}</div>
       </section>
     );
@@ -142,7 +145,10 @@ export default function CandidateDetail({ sessionId, onBack }) {
 
   return (
     <section className="hr-panel candidate-detail">
-      <button className="detail-back" onClick={onBack}>Back to candidates</button>
+      <div className="detail-nav">
+        <button className="detail-back" onClick={onBack}>Back to candidates</button>
+        <button className="detail-back secondary" onClick={onOpenJobPostings}>Job Postings</button>
+      </div>
 
       <div className="detail-title-row">
         <div>

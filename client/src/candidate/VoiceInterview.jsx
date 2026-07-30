@@ -33,6 +33,12 @@ const FALLBACK_QUESTION =
 const FALLBACK_RESPONSE =
   "Thank you for that answer. Let's continue with the next question.";
 
+function stopMediaStreams(activeStreams) {
+  Object.values(activeStreams || {}).forEach((stream) => {
+    stream?.getTracks?.().forEach((track) => track.stop());
+  });
+}
+
 // ── Browser TTS ─────────────────────────────────────────────────────────────
 function speakBrowser(text, onEnd, mouthRef) {
   if (!window.speechSynthesis || !text?.trim()) { onEnd?.(); return; }
@@ -142,6 +148,8 @@ export default function VoiceInterview({ config, streams, onStartFailure, onFini
   const onTranscriptRef  = useRef(null);
   const stableSessionId  = useRef(`pending_${Date.now()}`);
   const transcriptRef    = useRef([]);
+  const webcamStreamRef  = useRef(null);
+  const screenStreamRef  = useRef(null);
 
   // ✅ KEY FIX: store elapsed in a ref so callbacks always read the latest value
   // without needing elapsed in their dependency arrays (which caused re-renders
@@ -163,10 +171,23 @@ export default function VoiceInterview({ config, streams, onStartFailure, onFini
   const { play, stop: stopAudio, isPlaying, analyser } = useAudioPlayer();
   void analyser;
 
-  const { isRecording } = useScreenRecorder({
-    webcamStreamRef: { current: streams?.cameraStream ?? null },
-    sessionId: sessionIdRef.current ?? stableSessionId.current,
+  useEffect(() => {
+    webcamStreamRef.current = streams?.cameraStream ?? null;
+    screenStreamRef.current = streams?.screenStream ?? null;
+  }, [streams]);
+
+  const { start: startRecording, stop: stopRecording, isRecording } = useScreenRecorder({
+    webcamStreamRef,
+    screenStreamRef,
+    sessionId: stableSessionId.current,
+    sessionIdRef,
   });
+
+  useEffect(() => {
+    if (!streams?.screenStream) return undefined;
+    startRecording();
+    return () => stopRecording();
+  }, [startRecording, stopRecording, streams?.screenStream]);
 
   // ── Webcam PiP ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -178,7 +199,7 @@ export default function VoiceInterview({ config, streams, onStartFailure, onFini
 
   // ── VAD state ─────────────────────────────────────────────────────────────
   const handleVADState = useCallback((s) => {
-    console.log('[VAD→UI] state:', s);
+    if (import.meta.env.DEV) console.log('[VAD->UI] state:', s);
     if (s === 'processing') {
       setPhase('processing');
       setError('');
@@ -193,20 +214,22 @@ export default function VoiceInterview({ config, streams, onStartFailure, onFini
   const { startListening, stopListening, submitNow } = useVAD({
     onTranscript:  null,
     onStateChange: handleVADState,
+    audioStream: streams?.micStream ?? null,
   });
 
   // ── Speak helper ──────────────────────────────────────────────────────────
   const speakArjun = useCallback((text, audioBase64, onEnd) => {
     const safeText = text?.trim() || FALLBACK_RESPONSE;
-    console.log('[TTS] speaking:', safeText.slice(0, 60));
+    if (import.meta.env.DEV) console.log('[TTS] speaking:', safeText.slice(0, 60));
     if (audioBase64) {
       browserTTSActive.current = false;
-      play(audioBase64);
+      setPhase('arjun_speaking');
+      play(audioBase64, 'audio/mp3', onEnd);
     } else {
       browserTTSActive.current = true;
       setPhase('arjun_speaking');
       speakWhenReady(safeText, () => {
-        console.log('[TTS] done');
+        if (import.meta.env.DEV) console.log('[TTS] done');
         browserTTSActive.current = false;
         onEnd?.();
       }, mouthRef);
@@ -219,7 +242,7 @@ export default function VoiceInterview({ config, streams, onStartFailure, onFini
   // and does NOT cause this callback to be recreated on every tick.
   const handleTranscript = useCallback(async (text) => {
     const currentRound = roundRef.current;
-    console.log('[Interview] round', currentRound, 'transcript:', text);
+    if (import.meta.env.DEV) console.log('[Interview] round', currentRound, 'transcript:', text);
     setError('');
     setLiveAnswer('');
 
@@ -282,8 +305,10 @@ export default function VoiceInterview({ config, streams, onStartFailure, onFini
               setImprovements(report.answerImprovements);
             }
             // ✅ Read elapsed from ref — always the real current value
+            stopRecording();
             onFinish({ sessionId: sessionIdRef.current, config, elapsed: elapsedRef.current, report, history: transcriptRef.current });
           } catch {
+            stopRecording();
             onFinish({ sessionId: sessionIdRef.current, config, elapsed: elapsedRef.current, report: null, history: transcriptRef.current });
           }
         });
@@ -302,12 +327,12 @@ export default function VoiceInterview({ config, streams, onStartFailure, onFini
       if (data.audio) setPhase('arjun_speaking');
 
     } catch (err) {
-      console.error('[Interview] voice-respond error:', err);
+      if (import.meta.env.DEV) console.error('[Interview] voice-respond error:', err);
       setError(`Error: ${err.message} — is the server running?`);
       setPhase('idle');
     }
   // ✅ `elapsed` removed from deps — we use elapsedRef instead
-  }, [appendTranscript, config, speakArjun, onFinish]);
+  }, [appendTranscript, config, onFinish, speakArjun, stopRecording]);
 
   useEffect(() => { onTranscriptRef.current = handleTranscript; }, [handleTranscript]);
 
@@ -340,7 +365,9 @@ export default function VoiceInterview({ config, streams, onStartFailure, onFini
         timerRef.current = null;
       }
       stopListening();
+      stopRecording();
       stopAudio();
+      stopMediaStreams(streams);
       if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
@@ -392,7 +419,7 @@ export default function VoiceInterview({ config, streams, onStartFailure, onFini
       speakArjun(questionText, data.audio, () => setPhase('idle'));
       setPhase('arjun_speaking');
     } catch (err) {
-      console.error('[Interview] voice-start failed:', err);
+      if (import.meta.env.DEV) console.error('[Interview] voice-start failed:', err);
       setError(`Could not connect to server (${err.message}).`);
       idCounter.current++;
       replaceTranscript([{ role: 'arjun', text: FALLBACK_QUESTION, round: 1, id: idCounter.current }]);

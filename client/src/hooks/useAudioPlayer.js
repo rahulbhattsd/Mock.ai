@@ -33,7 +33,7 @@ export default function useAudioPlayer() {
   //   - a base64 string (audio/mp3 or audio/wav)
   //   - a Blob URL
   //   - a plain URL string
-  const play = useCallback((audioData, mimeType = 'audio/mp3') => {
+  const play = useCallback((audioData, mimeType = 'audio/mp3', onEnd = null) => {
     stop();
 
     let src;
@@ -65,14 +65,17 @@ export default function useAudioPlayer() {
     audio.onended = () => {
       setIsPlaying(false);
       URL.revokeObjectURL(src);
+      onEnd?.();
     };
     audio.onerror = () => {
       setIsPlaying(false);
+      onEnd?.();
     };
 
     audio.play().catch((err) => {
-      console.error('Audio playback failed:', err);
+      if (import.meta.env.DEV) console.error('Audio playback failed:', err);
       setIsPlaying(false);
+      onEnd?.();
     });
   }, [stop]);
 

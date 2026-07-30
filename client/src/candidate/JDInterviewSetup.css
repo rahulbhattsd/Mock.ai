@@ -37,6 +37,30 @@
   object-fit: contain;
 }
 
+.jd-setup-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.jd-setup-back {
+  min-height: 32px;
+  padding: 0 11px;
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.jd-setup-back:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .jd-setup-badge {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;

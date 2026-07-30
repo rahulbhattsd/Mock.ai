@@ -219,7 +219,8 @@ export default function AvatarStage({ mode = 'idle', mouthRef }) {
         camera.position.set(0, faceY, distance);
         camera.lookAt(0, faceY, 0);
 
-        console.info(
+        if (import.meta.env.DEV) {
+          console.info(
           '[AvatarStage] framing → crownY:', crownY.toFixed(3),
           'feetY:', feetY.toFixed(3),
           'totalHeight:', totalHeight.toFixed(3),
@@ -227,7 +228,8 @@ export default function AvatarStage({ mode = 'idle', mouthRef }) {
           'cameraDistance:', distance.toFixed(3),
           '— if the face is still cropped, raise FACE_CENTER_FRAC; if too',
           'zoomed in/out, adjust VISIBLE_HEIGHT_FRAC.'
-        );
+          );
+        }
 
         // Re-aim the lights at the model's actual face height now that we
         // know it (VRM rigs vary in height/proportions).
@@ -239,7 +241,7 @@ export default function AvatarStage({ mode = 'idle', mouthRef }) {
       },
       undefined,
       (err) => {
-        console.error('[AvatarStage] failed to load VRM at', MODEL_URL, err);
+        if (import.meta.env.DEV) console.error('[AvatarStage] failed to load VRM at', MODEL_URL, err);
         if (!cancelled) setStatus('error');
       }
     );

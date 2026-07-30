@@ -23,7 +23,7 @@ function reportVerdict(candidate) {
   return candidate?.report?.verdict || candidate?.aiVerdict || 'Borderline';
 }
 
-export default function CandidateList({ initialJdId, onClearJd }) {
+export default function CandidateList({ initialJdId, onClearJd, onOpenJobPostings }) {
   const [candidates, setCandidates] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [role, setRole] = useState('');
@@ -62,7 +62,13 @@ export default function CandidateList({ initialJdId, onClearJd }) {
   }, [role, minScore, jdId]);
 
   if (selectedId) {
-    return <CandidateDetail sessionId={selectedId} onBack={() => setSelectedId('')} />;
+    return (
+      <CandidateDetail
+        sessionId={selectedId}
+        onBack={() => setSelectedId('')}
+        onOpenJobPostings={onOpenJobPostings}
+      />
+    );
   }
 
   const clearJdFilter = () => {

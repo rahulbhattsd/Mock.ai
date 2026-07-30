@@ -67,6 +67,7 @@ function AppInner() {
   };
 
   const handleRetry = () => {
+    stopStreams(streams);
     setInterviewConfig(null);
     setStreams(null);
     setSessionData(null);
@@ -87,9 +88,9 @@ function AppInner() {
       )}
       {screen === 'select'      && <RoleSelector    onStart={handleStart} initialConfig={interviewConfig} onBrowseJobs={goBrowseJobs} onLogout={logout} />}
       {screen === 'jobs'        && <JobBoard onSelectJob={handleSelectJob} onHome={goHome} />}
-      {screen === 'apply'       && <JDInterviewSetup jdId={selectedJdId} onStart={handleStart} initialError={startError} />}
+      {screen === 'apply'       && <JDInterviewSetup jdId={selectedJdId} onStart={handleStart} onCancel={goBrowseJobs} initialError={startError} />}
       {screen === 'permissions' && <PermissionsGate onReady={(s) => { setStreams(s); setScreen('interview'); }} />}
-      {screen === 'interview'   && <VoiceInterview  config={interviewConfig} streams={streams} onStartFailure={handleStartFailure} onFinish={(d) => { setSessionData(d); setScreen('report'); }} />}
+      {screen === 'interview'   && <VoiceInterview  config={interviewConfig} streams={streams} onStartFailure={handleStartFailure} onFinish={(d) => { stopStreams(streams); setStreams(null); setSessionData(d); setScreen('report'); }} />}
       {screen === 'report'      && <FeedbackReport  sessionData={sessionData} report={sessionData?.report} onRetry={handleRetry} onHome={goHome} onBrowseJobs={goBrowseJobs} />}
     </div>
   );

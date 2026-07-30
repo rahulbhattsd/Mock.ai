@@ -12,15 +12,20 @@ export default function HRDashboard({ user, onLogout }) {
     setActiveTab('candidates');
   };
 
+  const openJobPostings = () => {
+    setSelectedJdId('');
+    setActiveTab('jobs');
+  };
+
   return (
     <main className="hr-dashboard">
       <div className="hr-grid-bg" />
 
       <header className="hr-dashboard-header">
-        <div className="hr-brand">
+        <button className="hr-brand" type="button" onClick={openJobPostings}>
           <span className="hr-brand-mark">o</span>
           <span>mock<span className="hr-brand-dot">.</span>ai</span>
-        </div>
+        </button>
 
         <div className="hr-header-actions">
           <div className="hr-company">
@@ -56,7 +61,7 @@ export default function HRDashboard({ user, onLogout }) {
       {activeTab === 'jobs' ? (
         <JobPostings onOpenCandidates={openCandidates} />
       ) : (
-        <CandidateList initialJdId={selectedJdId} onClearJd={() => setSelectedJdId('')} />
+        <CandidateList initialJdId={selectedJdId} onClearJd={() => setSelectedJdId('')} onOpenJobPostings={openJobPostings} />
       )}
     </main>
   );

@@ -4,7 +4,7 @@ import './JDInterviewSetup.css';
 
 const MAX_RESUME_SIZE_BYTES = 3 * 1024 * 1024;
 
-export default function JDInterviewSetup({ jdId, onStart, initialError = '' }) {
+export default function JDInterviewSetup({ jdId, onStart, onCancel, initialError = '' }) {
   const [posting, setPosting] = useState(null);
   const [resumeFile, setResumeFile] = useState(null);
   const [error, setError] = useState(initialError);
@@ -98,7 +98,14 @@ export default function JDInterviewSetup({ jdId, onStart, initialError = '' }) {
 
       <header className="jd-setup-header">
         <img src="/favicon.png" alt="Logo" className="jd-setup-logo" />
-        <span className="jd-setup-badge">JD Interview</span>
+        <div className="jd-setup-header-actions">
+          {onCancel && (
+            <button className="jd-setup-back" type="button" onClick={onCancel}>
+              Back to jobs
+            </button>
+          )}
+          <span className="jd-setup-badge">JD Interview</span>
+        </div>
       </header>
 
       <main className="jd-setup-main">

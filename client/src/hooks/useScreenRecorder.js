@@ -1,39 +1,75 @@
 // hooks/useScreenRecorder.js
-// Canvas compositor: draws screen capture + webcam PiP every frame
-// Records via MediaRecorder → Blob → uploads to /api/upload-recording
-//
-// Usage:
-//   const { start, stop, isRecording, error } = useScreenRecorder({ webcamStream, sessionId })
+// Canvas compositor: draws screen capture + webcam PiP every frame.
+// Records via MediaRecorder, then optionally uploads to /api/upload-recording.
 
 import { useRef, useState, useCallback } from 'react';
 import { API_BASE, authHeaders } from '../api.js';
 
-const FPS          = 30;
-const WEBM_MIME    = 'video/webm;codecs=vp9,opus';
+const FPS           = 30;
+const WEBM_MIME     = 'video/webm;codecs=vp9,opus';
 const FALLBACK_MIME = 'video/webm';
 
-// PiP position: bottom-right corner
 const PIP = {
-  widthRatio:  0.22,   // 22% of canvas width
+  widthRatio:  0.22,
   margin:      16,
   borderRadius: 12,
   borderWidth:  2,
 };
 
-export default function useScreenRecorder({ webcamStreamRef, sessionId }) {
+function debugError(...args) {
+  if (import.meta.env.DEV) console.error(...args);
+}
+
+function hasLiveVideo(stream) {
+  return stream?.getVideoTracks?.().some((track) => track.readyState === 'live');
+}
+
+export default function useScreenRecorder({ webcamStreamRef, screenStreamRef: providedScreenStreamRef, sessionId, sessionIdRef }) {
   const [isRecording, setIsRecording] = useState(false);
   const [error,       setError]       = useState(null);
-  const [uploadState, setUploadState] = useState('idle'); // idle|uploading|done|failed
+  const [uploadState, setUploadState] = useState('idle');
 
-  const canvasRef      = useRef(null);
-  const screenVideoRef = useRef(null);  // offscreen video for screen stream
-  const webcamVideoRef = useRef(null);  // offscreen video for webcam stream
-  const recorderRef    = useRef(null);
-  const chunksRef      = useRef([]);
-  const rafRef         = useRef(null);
+  const canvasRef       = useRef(null);
+  const screenVideoRef  = useRef(null);
+  const webcamVideoRef  = useRef(null);
+  const recorderRef     = useRef(null);
+  const chunksRef       = useRef([]);
+  const rafRef          = useRef(null);
   const screenStreamRef = useRef(null);
+  const stoppingRef     = useRef(false);
 
-  // ── Draw one frame onto canvas ──────────────────────────────
+  const uploadRecording = useCallback(async (mime) => {
+    if (import.meta.env.VITE_ENABLE_RECORDING_UPLOAD !== 'true') {
+      chunksRef.current = [];
+      setUploadState('idle');
+      return;
+    }
+
+    if (chunksRef.current.length === 0) return;
+    setUploadState('uploading');
+
+    const uploadSessionId = sessionIdRef?.current || sessionId;
+    const blob     = new Blob(chunksRef.current, { type: mime });
+    const formData = new FormData();
+    formData.append('recording', blob, `${uploadSessionId}.webm`);
+    formData.append('sessionId', uploadSessionId);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/upload-recording`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body:   formData,
+      });
+      if (!res.ok) throw new Error('Upload failed');
+      setUploadState('done');
+    } catch (err) {
+      debugError('Upload error:', err);
+      setUploadState('failed');
+    } finally {
+      chunksRef.current = [];
+    }
+  }, [sessionId, sessionIdRef]);
+
   const drawFrame = useCallback(() => {
     const canvas = canvasRef.current;
     const screen = screenVideoRef.current;
@@ -44,7 +80,6 @@ export default function useScreenRecorder({ webcamStreamRef, sessionId }) {
     const W   = canvas.width;
     const H   = canvas.height;
 
-    // 1. Draw screen capture as background
     if (screen.readyState >= 2) {
       ctx.drawImage(screen, 0, 0, W, H);
     } else {
@@ -52,25 +87,20 @@ export default function useScreenRecorder({ webcamStreamRef, sessionId }) {
       ctx.fillRect(0, 0, W, H);
     }
 
-    // 2. Draw webcam PiP — bottom right
     if (webcam && webcam.readyState >= 2) {
       const pipW = Math.round(W * PIP.widthRatio);
       const pipH = Math.round(pipW * (9 / 16));
       const pipX = W - pipW - PIP.margin;
       const pipY = H - pipH - PIP.margin;
 
-      // Rounded clip
       ctx.save();
       roundedRect(ctx, pipX, pipY, pipW, pipH, PIP.borderRadius);
       ctx.clip();
-
-      // Mirror webcam (natural selfie view)
       ctx.translate(pipX + pipW, pipY);
       ctx.scale(-1, 1);
       ctx.drawImage(webcam, 0, 0, pipW, pipH);
       ctx.restore();
 
-      // Border ring
       ctx.save();
       ctx.strokeStyle = 'rgba(232, 255, 71, 0.6)';
       ctx.lineWidth   = PIP.borderWidth;
@@ -78,7 +108,6 @@ export default function useScreenRecorder({ webcamStreamRef, sessionId }) {
       ctx.stroke();
       ctx.restore();
 
-      // REC indicator
       ctx.save();
       ctx.fillStyle = 'rgba(255, 68, 68, 0.9)';
       ctx.beginPath();
@@ -90,36 +119,53 @@ export default function useScreenRecorder({ webcamStreamRef, sessionId }) {
     rafRef.current = requestAnimationFrame(drawFrame);
   }, []);
 
-  // ── Start recording ─────────────────────────────────────────
+  const stop = useCallback(() => {
+    if (stoppingRef.current) return;
+    stoppingRef.current = true;
+
+    if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+      recorderRef.current.requestData?.();
+      recorderRef.current.stop();
+    }
+
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach((track) => track.stop());
+      screenStreamRef.current = null;
+    }
+
+    cancelAnimationFrame(rafRef.current);
+    setIsRecording(false);
+    stoppingRef.current = false;
+  }, []);
+
   const start = useCallback(async () => {
+    if (recorderRef.current?.state === 'recording') return;
+
     setError(null);
     chunksRef.current = [];
 
     try {
-      // 1. Request screen capture
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: FPS, cursor: 'always' },
-        audio: true,  // capture system audio if available
-      });
+      const screenStream = hasLiveVideo(providedScreenStreamRef?.current)
+        ? providedScreenStreamRef.current
+        : await navigator.mediaDevices.getDisplayMedia({
+            video: { frameRate: FPS, cursor: 'always' },
+            audio: true,
+          });
       screenStreamRef.current = screenStream;
 
-      // Stop recording if user closes the share dialog
-      screenStream.getVideoTracks()[0].onended = () => stop();
+      const [screenTrack] = screenStream.getVideoTracks();
+      if (screenTrack) screenTrack.onended = () => stop();
 
-      // 2. Set up offscreen screen video
       const screenVid = document.createElement('video');
       screenVid.srcObject = screenStream;
       screenVid.muted     = true;
       await screenVid.play();
       screenVideoRef.current = screenVid;
 
-      // Canvas dimensions match screen capture
-      const track    = screenStream.getVideoTracks()[0];
-      const settings = track.getSettings();
+      const settings = screenTrack?.getSettings?.() || {};
       const W        = settings.width  || 1280;
       const H        = settings.height || 720;
 
-      // 3. Set up offscreen webcam video
       if (webcamStreamRef?.current) {
         const webcamVid = document.createElement('video');
         webcamVid.srcObject = webcamStreamRef.current;
@@ -128,92 +174,41 @@ export default function useScreenRecorder({ webcamStreamRef, sessionId }) {
         webcamVideoRef.current = webcamVid;
       }
 
-      // 4. Create canvas
-      const canvas   = document.createElement('canvas');
-      canvas.width   = W;
-      canvas.height  = H;
+      const canvas  = document.createElement('canvas');
+      canvas.width  = W;
+      canvas.height = H;
       canvasRef.current = canvas;
-
-      // 5. Start drawing frames
       drawFrame();
 
-      // 6. Capture canvas stream + mic audio
       const canvasStream = canvas.captureStream(FPS);
+      screenStream.getAudioTracks().forEach((track) => canvasStream.addTrack(track));
 
-      // Mix in mic audio from screen stream if present
-      screenStream.getAudioTracks().forEach(t => canvasStream.addTrack(t));
-
-      // 7. Start MediaRecorder
-      const mime     = MediaRecorder.isTypeSupported(WEBM_MIME) ? WEBM_MIME : FALLBACK_MIME;
+      const mime = MediaRecorder.isTypeSupported(WEBM_MIME) ? WEBM_MIME : FALLBACK_MIME;
       const recorder = new MediaRecorder(canvasStream, {
-        mimeType:    mime,
+        mimeType: mime,
         videoBitsPerSecond: 2_500_000,
       });
 
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) chunksRef.current.push(event.data);
       };
 
       recorder.onstop = async () => {
         cancelAnimationFrame(rafRef.current);
+        setIsRecording(false);
         await uploadRecording(mime);
       };
 
-      recorder.start(1000); // chunk every 1s
+      recorder.start(1000);
       recorderRef.current = recorder;
       setIsRecording(true);
-
     } catch (err) {
       const msg = err.name === 'NotAllowedError'
         ? 'Screen share was denied. Recording requires screen share permission.'
         : `Recording error: ${err.message}`;
       setError(msg);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [webcamStreamRef, drawFrame]);
-
-  // ── Stop recording ──────────────────────────────────────────
-  const stop = useCallback(() => {
-    if (recorderRef.current && recorderRef.current.state !== 'inactive') {
-      recorderRef.current.stop();
-    }
-    if (screenStreamRef.current) {
-      screenStreamRef.current.getTracks().forEach(t => t.stop());
-      screenStreamRef.current = null;
-    }
-    cancelAnimationFrame(rafRef.current);
-    setIsRecording(false);
-  }, []);
-
-  // ── Upload to server ────────────────────────────────────────
-  const uploadRecording = useCallback(async (mime) => {
-    if (import.meta.env.VITE_ENABLE_RECORDING_UPLOAD !== 'true') {
-      chunksRef.current = [];
-      setUploadState('idle');
-      return;
-    }
-
-    if (chunksRef.current.length === 0) return;
-    setUploadState('uploading');
-
-    const blob     = new Blob(chunksRef.current, { type: mime });
-    const formData = new FormData();
-    formData.append('recording', blob, `${sessionId}.webm`);
-    formData.append('sessionId', sessionId);
-
-    try {
-      const res = await fetch(`${API_BASE}/api/upload-recording`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body:   formData,
-      });
-      if (!res.ok) throw new Error('Upload failed');
-      setUploadState('done');
-    } catch (err) {
-      console.error('Upload error:', err);
-      setUploadState('failed');
-    }
-  }, [sessionId]);
+  }, [drawFrame, providedScreenStreamRef, stop, uploadRecording, webcamStreamRef]);
 
   return {
     start,
@@ -224,17 +219,16 @@ export default function useScreenRecorder({ webcamStreamRef, sessionId }) {
   };
 }
 
-// ── Helpers ──────────────────────────────────────────────────
 function roundedRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y,     x + w, y + r);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
   ctx.lineTo(x + w, y + h - r);
   ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
   ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h,     x, y + h - r);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
   ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y,         x + r, y);
+  ctx.quadraticCurveTo(x, y, x + r, y);
   ctx.closePath();
 }
