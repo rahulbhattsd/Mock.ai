@@ -18,3 +18,18 @@ export async function hrFetch(path, options = {}) {
 
   return data;
 }
+
+export async function hrFetchBlob(path, options = {}) {
+  const headers = authHeaders(options.headers || {});
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+
+  if (!res.ok) {
+    const contentType = res.headers.get('content-type') || '';
+    const data = contentType.includes('application/json')
+      ? await res.json()
+      : { error: await res.text() };
+    throw new Error(data.error || `Request failed with ${res.status}`);
+  }
+
+  return res.blob();
+}

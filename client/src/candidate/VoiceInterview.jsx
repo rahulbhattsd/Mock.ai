@@ -1,7 +1,7 @@
 // client/src/candidate/VoiceInterview.jsx
 import { useState, useCallback, useEffect, useRef } from 'react';
 import './VoiceInterview.css';
-import WaveformRing      from '../components/WaveformRing.jsx';
+import AvatarStage      from './AvatarStage.jsx';
 import TranscriptFeed    from '../components/TranscriptFeed.jsx';
 import useVAD            from '../hooks/useVAD.js';
 import useAudioPlayer    from '../hooks/useAudioPlayer.js';
@@ -34,7 +34,7 @@ const FALLBACK_RESPONSE =
   "Thank you for that answer. Let's continue with the next question.";
 
 // ── Browser TTS ─────────────────────────────────────────────────────────────
-function speakBrowser(text, onEnd) {
+function speakBrowser(text, onEnd, mouthRef) {
   if (!window.speechSynthesis || !text?.trim()) { onEnd?.(); return; }
   window.speechSynthesis.cancel();
 
@@ -62,6 +62,9 @@ function speakBrowser(text, onEnd) {
     utt.pitch  = 1.1;
     utt.volume = 1;
 
+    utt.onstart = () => { if (mouthRef) mouthRef.current = performance.now(); };
+    utt.onboundary = () => { if (mouthRef) mouthRef.current = performance.now(); };
+
     const watchdog = setTimeout(() => { onEnd?.(); }, Math.max(6000, text.length * 65));
     utt.onend   = () => { clearTimeout(watchdog); onEnd?.(); };
     utt.onerror = () => { clearTimeout(watchdog); onEnd?.(); };
@@ -70,8 +73,8 @@ function speakBrowser(text, onEnd) {
   }, 80);
 }
 
-function speakWhenReady(text, onEnd) {
-  const go = () => speakBrowser(text, onEnd);
+function speakWhenReady(text, onEnd, mouthRef) {
+  const go = () => speakBrowser(text, onEnd, mouthRef);
   if (window.speechSynthesis.getVoices().length > 0) {
     go();
   } else {
@@ -134,6 +137,7 @@ export default function VoiceInterview({ config, streams, onStartFailure, onFini
   const pipVideoRef      = useRef(null);
   const browserTTSActive = useRef(false);
   const phaseRef         = useRef('idle');
+  const mouthRef         = useRef(0);
   const interviewStarted = useRef(false);
   const onTranscriptRef  = useRef(null);
   const stableSessionId  = useRef(`pending_${Date.now()}`);
@@ -157,6 +161,7 @@ export default function VoiceInterview({ config, streams, onStartFailure, onFini
   }, []);
 
   const { play, stop: stopAudio, isPlaying, analyser } = useAudioPlayer();
+  void analyser;
 
   const { isRecording } = useScreenRecorder({
     webcamStreamRef: { current: streams?.cameraStream ?? null },
@@ -204,7 +209,7 @@ export default function VoiceInterview({ config, streams, onStartFailure, onFini
         console.log('[TTS] done');
         browserTTSActive.current = false;
         onEnd?.();
-      });
+      }, mouthRef);
     }
   }, [play]);
 
@@ -391,7 +396,7 @@ export default function VoiceInterview({ config, streams, onStartFailure, onFini
       setError(`Could not connect to server (${err.message}).`);
       idCounter.current++;
       replaceTranscript([{ role: 'arjun', text: FALLBACK_QUESTION, round: 1, id: idCounter.current }]);
-      speakWhenReady(FALLBACK_QUESTION, () => setPhase('idle'));
+      speakWhenReady(FALLBACK_QUESTION, () => setPhase('idle'), mouthRef);
       setPhase('arjun_speaking');
     }
   };
@@ -467,10 +472,7 @@ export default function VoiceInterview({ config, streams, onStartFailure, onFini
       {/* Stage */}
       <div className="vi-stage">
         <div className="vi-avatar-wrap">
-          <WaveformRing analyser={analyser} mode={ringMode} />
-          <div className={`vi-avatar ${phase === 'arjun_speaking' ? 'speaking' : ''}`}>
-            <span className="vi-avatar-letter">A</span>
-          </div>
+          <AvatarStage mode={ringMode} mouthRef={mouthRef} />
         </div>
 
         <div className="vi-identity">

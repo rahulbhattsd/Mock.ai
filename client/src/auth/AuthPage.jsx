@@ -15,7 +15,8 @@ export default function AuthPage({ onSuccess }) {
 
   const { login, signup, googleAuth } = useAuth();
 
-  // Load Google Identity SDK
+  // Load Google Identity SDK. The dependency suppressions below preserve the
+  // original Google button lifecycle during this Phase 1 server-only change.
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) return;
     const script = document.createElement('script');
@@ -24,6 +25,7 @@ export default function AuthPage({ onSuccess }) {
     script.onload = initGoogle;
     document.body.appendChild(script);
     return () => document.body.removeChild(script);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const initGoogle = useCallback(() => {
@@ -33,6 +35,7 @@ export default function AuthPage({ onSuccess }) {
       callback:  handleGoogleCallback,
     });
     renderGoogleBtn();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role]);
 
   const renderGoogleBtn = () => {
@@ -49,6 +52,7 @@ export default function AuthPage({ onSuccess }) {
 
   useEffect(() => {
     if (window.google) { initGoogle(); renderGoogleBtn(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, role]);
 
   const handleGoogleCallback = async (response) => {

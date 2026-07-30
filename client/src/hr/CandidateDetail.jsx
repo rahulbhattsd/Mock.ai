@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { hrFetch } from './hrApi.js';
+import { hrFetch, hrFetchBlob } from './hrApi.js';
 import './CandidateDetail.css';
 
 const VERDICT_COLOR = {
@@ -54,6 +54,7 @@ export default function CandidateDetail({ sessionId, onBack }) {
   const [shortlisted, setShortlisted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [openingResume, setOpeningResume] = useState(false);
 
   useEffect(() => {
     async function loadCandidate() {
@@ -101,6 +102,23 @@ export default function CandidateDetail({ sessionId, onBack }) {
     }
   }
 
+  async function viewResume() {
+    if (!session?.resumeFileId) return;
+
+    setOpeningResume(true);
+    setError('');
+
+    try {
+      const blob = await hrFetchBlob(`/api/hr/candidate/${sessionId}/resume`);
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setOpeningResume(false);
+    }
+  }
+
   if (loading) {
     return <section className="hr-panel candidate-detail"><div className="hr-empty">Loading candidate...</div></section>;
   }
@@ -143,7 +161,17 @@ export default function CandidateDetail({ sessionId, onBack }) {
 
       <div className="detail-grid">
         <article className="detail-card">
-          <h3>Resume context</h3>
+          <div className="report-heading">
+            <h3>Resume context</h3>
+            <button
+              className="resume-view-btn"
+              type="button"
+              onClick={viewResume}
+              disabled={!session.resumeFileId || openingResume}
+            >
+              {openingResume ? 'Opening...' : 'View resume'}
+            </button>
+          </div>
           <div className="context-metric">
             <span>Experience</span>
             <strong>{candidate.yearsExperience ?? 'N/A'} years</strong>

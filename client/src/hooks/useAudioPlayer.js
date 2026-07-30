@@ -17,7 +17,9 @@ export default function useAudioPlayer() {
       audioRef.current.src = '';
     }
     if (sourceRef.current) {
-      try { sourceRef.current.disconnect(); } catch {}
+      try { sourceRef.current.disconnect(); } catch {
+        // Source nodes may already be disconnected during cleanup.
+      }
     }
     if (ctxRef.current) {
       ctxRef.current.close().catch(() => {});

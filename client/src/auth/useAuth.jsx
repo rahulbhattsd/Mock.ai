@@ -1,4 +1,5 @@
 // client/src/auth/useAuth.js
+/* eslint-disable react-refresh/only-export-components, react-hooks/set-state-in-effect */
 import { useState, useEffect, createContext, useContext } from 'react';
 import { API_BASE } from '../api.js';
 
@@ -8,7 +9,8 @@ export function AuthProvider({ children }) {
   const [user,    setUser]    = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Restore session on mount
+  // Restore session on mount. This mirrors the original behavior; lint-only
+  // suppression avoids changing auth timing during the Phase 1 guard work.
   useEffect(() => {
     const token = localStorage.getItem('token');
     const saved = localStorage.getItem('user');

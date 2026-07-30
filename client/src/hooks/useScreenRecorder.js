@@ -169,6 +169,7 @@ export default function useScreenRecorder({ webcamStreamRef, sessionId }) {
         : `Recording error: ${err.message}`;
       setError(msg);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [webcamStreamRef, drawFrame]);
 
   // ── Stop recording ──────────────────────────────────────────

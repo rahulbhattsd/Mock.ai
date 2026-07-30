@@ -49,6 +49,8 @@ function TranscriptEntry({ entry }) {
   const indexRef = useRef(0);
 
   useEffect(() => {
+    // Preserve original instant candidate rendering during Phase 1.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (entry.role === 'you') { setDisplayed(entry.text); return; }
 
     // Arjun: typewriter at ~40ms/char

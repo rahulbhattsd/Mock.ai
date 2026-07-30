@@ -1,0 +1,61 @@
+/* AvatarStage.css */
+.avatar-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 32%, rgba(255, 214, 148, 0.16), transparent 62%),
+    radial-gradient(circle at 50% 82%, rgba(232, 255, 71, 0.05), transparent 70%);
+  box-shadow:
+    0 0 0 1px rgba(255, 224, 178, 0.08),
+    0 0 34px 4px rgba(255, 200, 120, 0.14),
+    0 0 70px 10px rgba(232, 255, 71, 0.05);
+}
+
+/* Soft inner vignette so the edges of the circular stage don't look flat. */
+.avatar-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 100%,
+    rgba(0, 0, 0, 0.35),
+    transparent 55%
+  );
+}
+
+.avatar-stage canvas {
+  display: block;
+}
+
+.avatar-stage-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12%;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.72);
+  font-family: inherit;
+}
+
+.avatar-stage-loading {
+  animation: avatar-stage-pulse 1.6s ease-in-out infinite;
+}
+
+.avatar-stage-error {
+  color: rgba(255, 170, 150, 0.85);
+}
+
+@keyframes avatar-stage-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}

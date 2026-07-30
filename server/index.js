@@ -3,7 +3,7 @@ import express from "express";
 import authRoutes, { authMiddleware } from "./routes/auth.js";
 import cors from "cors";
 import multer from "multer";
-import { MongoClient, ObjectId } from "mongodb";
+import { GridFSBucket, MongoClient, ObjectId } from "mongodb";
 import jwt from "jsonwebtoken";
 import { PDFParse } from "pdf-parse";
 import { JWT_SECRET } from "./config.js";
@@ -840,6 +840,7 @@ app.post("/api/voice-start", authCandidate, interviewLimiter, optionalInterviewC
 
     const db = req.app.locals.db;
     const isJdBased = Boolean(String(jdId || "").trim());
+    const sessionObjectId = new ObjectId();
 
     let interviewContext = null;
     let interviewContextStatus = "skipped";
@@ -847,6 +848,7 @@ app.post("/api/voice-start", authCandidate, interviewLimiter, optionalInterviewC
     let sessionDifficulty = difficulty;
     let jdObjectId = null;
     let jdPosting = null;
+    let resumeFileId = null;
 
     if (isJdBased) {
       if (!ObjectId.isValid(jdId)) {
@@ -868,7 +870,33 @@ app.post("/api/voice-start", authCandidate, interviewLimiter, optionalInterviewC
         return res.status(409).json({ error: "This JD posting is not accepting applications." });
       }
 
+      const existingAttempt = await db.collection("sessions").findOne({
+        candidateId: req.user.id,
+        jdId: jdObjectId,
+      });
+      if (existingAttempt) {
+        return res.status(409).json({
+          error: "You have already used your one attempt for this posting.",
+        });
+      }
+
       const uploadedResumeText = await validateResumeUpload(req.file);
+      const bucket = new GridFSBucket(db, { bucketName: "resumes" });
+      const uploadStream = bucket.openUploadStream(`${sessionObjectId.toString()}.pdf`, {
+        metadata: {
+          sessionId: sessionObjectId,
+          candidateId: req.user.id,
+          jdId: jdObjectId,
+        },
+      });
+
+      await new Promise((resolve, reject) => {
+        uploadStream.on("error", reject);
+        uploadStream.on("finish", resolve);
+        uploadStream.end(req.file.buffer);
+      });
+      resumeFileId = uploadStream.id;
+
       const normalizedJdText = normalizeJdText(jdPosting.jdText);
 
       try {
@@ -884,6 +912,7 @@ app.post("/api/voice-start", authCandidate, interviewLimiter, optionalInterviewC
     }
 
     const session = {
+      _id: sessionObjectId,
       candidateId: req.user.id,
       candidateEmail: req.user.email,
       candidateName,
@@ -902,6 +931,7 @@ app.post("/api/voice-start", authCandidate, interviewLimiter, optionalInterviewC
       session.jdId = jdObjectId;
       session.jdTitle = jdPosting.title;
       session.jdSeniorityLevel = interviewContext?.job?.seniorityLevel || null;
+      session.resumeFileId = resumeFileId;
     }
 
     const result = await db.collection("sessions").insertOne(session);
@@ -1422,6 +1452,57 @@ app.get("/api/hr/candidates", authHR, async (req, res) => {
       .toArray();
 
     res.json(candidates);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/hr/candidate/:id/resume
+app.get("/api/hr/candidate/:id/resume", authHR, async (req, res) => {
+  try {
+    const db = req.app.locals.db;
+    const ownerId = getHrOwnerId(req.hr);
+
+    if (!ownerId) {
+      return res.status(403).json({ error: "HR account required" });
+    }
+
+    if (!ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ error: "Not found" });
+    }
+
+    const ownedJdIds = await getOwnedJdIds(db, ownerId);
+
+    const session = await db
+      .collection("sessions")
+      .findOne(
+        {
+          _id: new ObjectId(req.params.id),
+          status: "completed",
+          interviewType: "jd_based",
+          jdId: { $in: ownedJdIds },
+        },
+        { projection: { resumeFileId: 1 } }
+      );
+    if (!session) return res.status(404).json({ error: "Not found" });
+
+    if (!session.resumeFileId) {
+      return res.status(404).json({ error: "Resume not found" });
+    }
+
+    const bucket = new GridFSBucket(db, { bucketName: "resumes" });
+    const downloadStream = bucket.openDownloadStream(session.resumeFileId);
+
+    downloadStream.on("error", (err) => {
+      if (!res.headersSent) {
+        return res.status(err.code === "ENOENT" ? 404 : 500).json({ error: "Resume not found" });
+      }
+
+      res.destroy(err);
+    });
+
+    res.set("Content-Type", "application/pdf");
+    downloadStream.pipe(res);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
