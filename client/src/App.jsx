@@ -9,6 +9,7 @@ import PermissionsGate from './candidate/PermissionsGate.jsx';
 import VoiceInterview  from './candidate/VoiceInterview.jsx';
 import FeedbackReport  from './components/FeedbackReport.jsx';
 import HRDashboard from './hr/HRDashboard.jsx';
+import AboutPage from './candidate/AboutPage.jsx';
 
 function getApplyJdId() {
   const match = window.location.pathname.match(/^\/apply\/([^/?#]+)/);
@@ -74,6 +75,9 @@ function AppInner() {
     setStartError('');
     setScreen(applyJdId ? 'apply' : 'select');
   };
+  const goAbout = () => {
+  setScreen('about');
+};
 
   if (loading) return <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:'#080808'}}><span style={{color:'#e8ff47',fontSize:24}}>◉</span></div>;
 
@@ -86,8 +90,9 @@ function AppInner() {
       {screen === 'apply' && (
         <button onClick={logout} style={{position:'fixed',top:16,right:16,zIndex:2,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',color:'rgba(255,255,255,0.5)',padding:'6px 14px',borderRadius:8,fontSize:12,cursor:'pointer',fontFamily:'inherit'}}>Sign out</button>
       )}
-      {screen === 'select'      && <RoleSelector    onStart={handleStart} initialConfig={interviewConfig} onBrowseJobs={goBrowseJobs} onLogout={logout} />}
-      {screen === 'jobs'        && <JobBoard onSelectJob={handleSelectJob} onHome={goHome} />}
+      {screen === 'select'      && <RoleSelector    onStart={handleStart} initialConfig={interviewConfig} onBrowseJobs={goBrowseJobs} onLogout={logout} onAbout={goAbout}/>}
+      {screen === 'jobs'        && <JobBoard onSelectJob={handleSelectJob} onHome={goHome}  onAbout={goAbout}/>}
+      {screen === 'about' && <AboutPage onHome={goHome} onBrowseJobs={goBrowseJobs} />}
       {screen === 'apply'       && <JDInterviewSetup jdId={selectedJdId} onStart={handleStart} onCancel={goBrowseJobs} initialError={startError} />}
       {screen === 'permissions' && <PermissionsGate onReady={(s) => { setStreams(s); setScreen('interview'); }} />}
       {screen === 'interview'   && <VoiceInterview  config={interviewConfig} streams={streams} onStartFailure={handleStartFailure} onFinish={(d) => { stopStreams(streams); setStreams(null); setSessionData(d); setScreen('report'); }} />}

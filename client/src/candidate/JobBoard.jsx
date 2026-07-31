@@ -15,7 +15,7 @@ function formatPostedDate(value) {
   });
 }
 
-export default function JobBoard({ onSelectJob, onHome }) {
+export default function JobBoard({ onSelectJob, onHome, onAbout }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -27,6 +27,7 @@ export default function JobBoard({ onSelectJob, onHome }) {
       try {
         setLoading(true);
         setError('');
+
         const response = await fetch(`${API_BASE}/api/jobs`);
         const data = await response.json().catch(() => []);
 
@@ -34,11 +35,17 @@ export default function JobBoard({ onSelectJob, onHome }) {
           throw new Error(data?.error || 'Could not load open roles.');
         }
 
-        if (!ignore) setJobs(Array.isArray(data) ? data : []);
+        if (!ignore) {
+          setJobs(Array.isArray(data) ? data : []);
+        }
       } catch (err) {
-        if (!ignore) setError(err.message || 'Could not load open roles.');
+        if (!ignore) {
+          setError(err.message || 'Could not load open roles.');
+        }
       } finally {
-        if (!ignore) setLoading(false);
+        if (!ignore) {
+          setLoading(false);
+        }
       }
     }
 
@@ -54,10 +61,29 @@ export default function JobBoard({ onSelectJob, onHome }) {
       <div className="role-grid-bg" />
 
       <header className="job-board-header">
-        <button className="job-board-home" onClick={onHome} type="button">
+        <button
+          className="job-board-home"
+          onClick={onHome}
+          type="button"
+        >
           Home
         </button>
-        <span className="role-badge">Open Roles</span>
+
+        <div className="job-board-header-actions">
+          {onAbout && (
+            <button
+              className="role-badge"
+              onClick={onAbout}
+              type="button"
+            >
+              About
+            </button>
+          )}
+
+          <h2 className="job-board-heading">
+            Open Roles
+          </h2>
+        </div>
       </header>
 
       <section className="job-board-hero">
@@ -65,9 +91,14 @@ export default function JobBoard({ onSelectJob, onHome }) {
           <span className="role-eyebrow-dot" />
           Candidate Job Board
         </div>
-        <h1 className="job-board-title">Choose a role and start your interview.</h1>
+
+        <h1 className="job-board-title">
+          Choose a role and start your interview.
+        </h1>
+
         <p className="job-board-subtitle">
-          These openings are posted by HR teams and connect directly into the resume-based interview flow.
+          These openings are posted by HR teams and connect directly
+          into the resume-based interview flow.
         </p>
       </section>
 
@@ -108,7 +139,10 @@ export default function JobBoard({ onSelectJob, onHome }) {
                   <h2>{job.title || 'Untitled role'}</h2>
                   <p>Posted {formatPostedDate(job.createdAt)}</p>
                 </div>
-                <span className="job-board-apply">Apply</span>
+
+                <span className="job-board-apply">
+                  Apply
+                </span>
               </button>
             );
           })}

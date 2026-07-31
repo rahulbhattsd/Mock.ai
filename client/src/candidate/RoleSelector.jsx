@@ -18,7 +18,7 @@ const difficulties = [
   { id: 'senior',  label: 'Senior',  sub: '5+ yrs'  },
 ];
 
-export default function RoleSelector({ onStart, initialConfig = null, onBrowseJobs, onLogout }) {
+export default function RoleSelector({ onStart, initialConfig = null, onBrowseJobs, onLogout, onAbout }) {
   const [selectedRole, setSelectedRole] = useState(initialConfig?.role ?? null);
   const [selectedDiff, setSelectedDiff] = useState(initialConfig?.difficulty ?? 'mid');
 
@@ -57,6 +57,15 @@ export default function RoleSelector({ onStart, initialConfig = null, onBrowseJo
           {onLogout && (
             <button className="role-header-link" onClick={onLogout} type="button">
               Sign out
+            </button>
+          )}
+          {onAbout && (
+            <button
+               className="role-badge"
+               onClick={onAbout}
+               type="button"
+            >
+               About
             </button>
           )}
         </div>

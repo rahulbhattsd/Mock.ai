@@ -1,0 +1,329 @@
+.about-page {
+  min-height: 100vh;
+  background: #080808;
+  color: #fff;
+  position: relative;
+  overflow-x: hidden;
+padding-bottom: 7px;
+padding-top: 7px;
+}
+
+/* ── Header ── */
+.about-header {
+  width: min(1280px, calc(100% - 48px));
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  position: relative;
+  z-index: 2;
+}
+
+.about-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.about-home {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 6px 4px;
+}
+
+.about-home:hover { color: #fff; }
+
+/* ── Hero ── */
+.about-hero {
+  width: min(1280px, calc(100% - 48px));
+  margin: 0 auto;
+  text-align: center;
+  padding: 40px 0 48px;
+  position: relative;
+  z-index: 2;
+}
+
+.about-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: clamp(32px, 6vw, 56px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 18px 0 14px;
+  color: #fff;
+}
+
+.about-title-accent { color: #e8ff47; font-style: italic; }
+
+.about-subtitle {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 16px;
+  max-width: 460px;
+  margin: 0 auto;
+}
+
+/* ── Hero image (unchanged, kept as-is) ── */
+.about-image-wrap {
+  width: min(1280px, calc(100% - 48px));
+  margin: 10px auto 70px;
+  position: relative;
+  z-index: 2;
+}
+
+.about-image {
+  width: 100%;
+  display: block;
+  border-radius: 18px;
+  border: 1px solid rgba(232, 255, 71, .12);
+  box-shadow:
+      0 0 60px rgba(232, 255, 71, .05),
+      0 20px 60px rgba(0, 0, 0, .45);
+}
+
+/* ── Problem / Solution blocks ── */
+.about-block {
+  width: min(1280px, calc(100% - 48px));
+  margin: 0 auto 28px;
+  position: relative;
+  z-index: 2;
+}
+
+.about-block-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.about-card {
+  border-radius: 14px;
+  padding: 28px 26px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.about-card.solution {
+  border-color: rgba(232, 255, 71, 0.25);
+  background: rgba(232, 255, 71, 0.03);
+}
+
+.about-card-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 20px;
+  margin-bottom: 14px;
+}
+
+.about-card.problem .about-card-tag {
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+.about-card.solution .about-card-tag {
+  color: #e8ff47;
+  border: 1px solid rgba(232, 255, 71, 0.35);
+}
+
+.about-card h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 16px;
+  color: #fff;
+}
+
+/* ── Creative list treatment: ✕ / ✓ markers, no default bullets ── */
+.about-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.about-list li {
+  position: relative;
+  padding-left: 24px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.about-list li::before {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.problem-list li::before {
+  content: '✕';
+  color: rgba(248, 113, 113, 0.65);
+}
+
+.solution-list li::before {
+  content: '✓';
+  color: #e8ff47;
+}
+
+/* Bold payoff line at the bottom of each solution card */
+.about-outcome {
+  margin: 18px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid rgba(232, 255, 71, 0.15);
+  color: #e8ff47;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+/* ── CTA — fixed-width button, not full-bleed ── */
+.about-cta {
+  display: flex;
+  justify-content: center;
+  margin: 48px 0 24px;
+  position: relative;
+  z-index: 2;
+}
+
+.about-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 36px;
+  border-radius: 12px;
+  background: #e8ff47;
+  color: #0a0a0a;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 0 40px rgba(232, 255, 71, .18);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.about-cta-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 60px rgba(232, 255, 71, .28);
+}
+
+.about-cta-btn .start-arrow {
+  display: inline-block;
+  transition: transform .2s ease;
+}
+
+.about-cta-btn:hover .start-arrow {
+  transform: translateX(4px);
+}
+
+.role-footer {
+  text-align: center;
+  margin-top: 40px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .about-header,
+  .about-hero,
+  .about-block,
+  .about-image-wrap {
+    width: calc(100% - 32px);
+  }
+
+  .about-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .about-image {
+    border-radius: 12px;
+  }
+
+  .about-card {
+    padding: 22px 20px;
+  }
+}
+/* ================= IMAGE SLIDER ================= */
+
+.about-slider-section {
+  width: min(1280px, calc(100% - 48px));
+  margin: 0 auto 70px;
+  overflow: hidden;
+  position: relative;
+  border-radius: 22px;
+  z-index: 2;
+}
+
+.about-slider-track {
+  display: flex;
+  width: max-content;
+  animation: autoScroll 18s linear infinite;
+}
+
+.about-slide-image {
+  width: min(1000px, 90vw);
+  height: auto;
+  flex-shrink: 0;
+  border-radius: 20px;
+  margin-right: 30px;
+
+  border: 1px solid rgba(232,255,71,.12);
+
+  box-shadow:
+    0 20px 70px rgba(0,0,0,.45),
+    0 0 40px rgba(232,255,71,.08);
+}
+
+.about-slider-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes autoScroll {
+
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(calc(-100% / 2));
+  }
+
+}
+
+@media (max-width:768px){
+
+  .about-slider-section{
+    width:calc(100% - 24px);
+    margin-bottom:50px;
+  }
+
+  .about-slide-image{
+    width:92vw;
+    margin-right:18px;
+    border-radius:14px;
+  }
+
+}
