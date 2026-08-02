@@ -955,7 +955,6 @@ app.post("/api/voice-start", authCandidate, interviewLimiter, optionalInterviewC
     res.status(500).json({ error: err.message });
   }
 });
-
 // POST /api/transcribe
 app.post("/api/transcribe", authCandidate, transcribeLimiter, upload.single("audio"), async (req, res) => {
   try {
@@ -975,10 +974,24 @@ app.post("/api/transcribe", authCandidate, transcribeLimiter, upload.single("aud
         }
       );
 
-      const dgData = await dgRes.json();
-      const transcript =
-        dgData?.results?.channels?.[0]?.alternatives?.[0]?.transcript?.trim();
-      if (transcript) return res.json({ transcript });
+      const dgData = await dgRes.json().catch(() => null);
+
+      if (!dgRes.ok) {
+        console.error("[transcribe] Deepgram error:", dgRes.status, JSON.stringify(dgData));
+      } else {
+        const transcript =
+          dgData?.results?.channels?.[0]?.alternatives?.[0]?.transcript?.trim();
+        const confidence =
+          dgData?.results?.channels?.[0]?.alternatives?.[0]?.confidence;
+
+        if (transcript) {
+          console.log(`[transcribe] engine=deepgram confidence=${confidence} chars=${transcript.length}`);
+          return res.json({ transcript });
+        }
+        console.warn("[transcribe] Deepgram returned 200 but empty transcript — audio may be silent/too short.");
+      }
+    } else {
+      console.warn("[transcribe] DEEPGRAM_API not set — always using Groq Whisper fallback.");
     }
 
     // ── Groq Whisper (FALLBACK) ──────────────────────────────────────────────
@@ -995,13 +1008,17 @@ app.post("/api/transcribe", authCandidate, transcribeLimiter, upload.single("aud
     });
 
     const transcript = transcription.text?.trim();
-    if (transcript) return res.json({ transcript });
+    if (transcript) {
+      console.log(`[transcribe] engine=groq-whisper chars=${transcript.length}`);
+      return res.json({ transcript });
+    }
 
+    console.error("[transcribe] Both Deepgram and Whisper failed to produce a transcript.");
     return res
       .status(500)
       .json({ error: "Transcription failed — empty result" });
   } catch (err) {
-    console.error("[transcribe]", err);
+    console.error("[transcribe] fatal error:", err);
     res.status(500).json({ error: err.message });
   }
 });
