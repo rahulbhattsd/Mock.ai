@@ -6,6 +6,12 @@
 import { useState, useEffect, useRef } from 'react';
 import './PermissionsGate.css';
 
+function isScreenShareSupported() {
+  return typeof navigator !== 'undefined' &&
+         !!navigator.mediaDevices &&
+         !!navigator.mediaDevices.getDisplayMedia;
+}
+
 const STEPS = [
   {
     id:      'mic',
@@ -40,6 +46,7 @@ export default function PermissionsGate({ onReady }) {
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState(null);
   const [preview,  setPreview]  = useState(false); // show camera preview
+  const [screenSupported, setScreenSupported] = useState(isScreenShareSupported());
 
   // Streams to hand off
   const micStreamRef    = useRef(null);
@@ -100,6 +107,11 @@ export default function PermissionsGate({ onReady }) {
       }
 
       else if (stepId === 'screen') {
+        if (!screenSupported) {
+          setGranted(g => ({ ...g, screen: true }));
+          return;
+        }
+
         const stream = await navigator.mediaDevices.getDisplayMedia({
           video: { frameRate: 30, cursor: 'always' },
           audio: true,
@@ -115,11 +127,16 @@ export default function PermissionsGate({ onReady }) {
       }
 
     } catch (err) {
-      const msg =
-        err.name === 'NotAllowedError' ? `Permission denied. Please allow ${stepId} access in your browser settings.`
-      : err.name === 'NotFoundError'   ? `No ${stepId} device found.`
-      : `Error: ${err.message}`;
-      setError(msg);
+      if (stepId === 'screen' && ['NotSupportedError', 'TypeError', 'NotFoundError'].includes(err.name)) {
+        setScreenSupported(false);
+        setGranted(g => ({ ...g, screen: true }));
+      } else {
+        const msg =
+          err.name === 'NotAllowedError' ? `Permission denied. Please allow ${stepId} access in your browser settings.`
+        : err.name === 'NotFoundError'   ? `No ${stepId} device found.`
+        : `Error: ${err.message}`;
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -171,12 +188,28 @@ export default function PermissionsGate({ onReady }) {
                   <div className="pgate-step-info">
                     <div className="pgate-step-top">
                       <span className="pgate-step-label">{s.label}</span>
-                      <span className={`pgate-step-status ${isDone ? 'granted' : isActive ? 'pending' : 'waiting'}`}>
-                        {isDone ? 'Granted' : isActive ? 'Required' : 'Waiting'}
+                      <span className={`pgate-step-status ${
+                        (s.id === 'screen' && !screenSupported) ? 'waiting'
+                        : isDone ? 'granted'
+                        : isActive ? 'pending'
+                        : 'waiting'
+                      }`}>
+                        {(s.id === 'screen' && !screenSupported) ? (isDone ? 'Skipped' : 'Optional')
+                         : isDone ? 'Granted'
+                         : isActive ? 'Required'
+                         : 'Waiting'}
                       </span>
                     </div>
-                    <p className="pgate-step-desc">{s.desc}</p>
-                    <span className="pgate-step-why">{s.why}</span>
+                    <p className="pgate-step-desc">
+                      {(s.id === 'screen' && !screenSupported)
+                        ? "Screen sharing isn't available on this device. You can continue using your camera and microphone."
+                        : s.desc}
+                    </p>
+                    <span className="pgate-step-why">
+                      {(s.id === 'screen' && !screenSupported)
+                        ? "Optional — skipped on this device"
+                        : s.why}
+                    </span>
                   </div>
                 </div>
               );
@@ -201,7 +234,7 @@ export default function PermissionsGate({ onReady }) {
               {loading ? (
                 <><span className="pgate-spinner" /> Requesting access...</>
               ) : (
-                <>{step.icon} {step.action}</>
+                <>{step.icon} {(step.id === 'screen' && !screenSupported) ? 'Continue without screen share' : step.action}</>
               )}
             </button>
           ) : (
