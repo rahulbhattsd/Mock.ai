@@ -708,7 +708,7 @@ async function groqChat(history, role, difficulty, interviewContext = null) {
   }
 
   const completion = await groq.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
+    model: "openai/gpt-oss-120b",
     messages,
     temperature: 0.65,       // focused, less rambling
     max_tokens: 280,         // keep responses tight
@@ -1181,7 +1181,7 @@ For answerImprovements: for each candidate answer, return only the round number,
 `;
 
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.3,
     });
